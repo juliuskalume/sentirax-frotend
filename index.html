@@ -52,7 +52,6 @@
 
   <style>
     :root {
-      /* SentiraX dark + neon theme */
       --accent: #22c55e;
       --accent2: #22d3ee;
       --bg: #020617;
@@ -151,7 +150,7 @@
     @media (min-width: 640px) {
       .logo { font-size: 1.75rem; }
     }
-    
+
     .btn {
       padding: 0.75rem 1.5rem;
       border: none;
@@ -198,6 +197,7 @@
       padding: 0.4rem 0.8rem;
       border: 1px solid transparent;
       font-size: 0.85rem;
+      cursor: pointer;
     }
     .btn-ghost:hover {
       border-color: var(--border-subtle);
@@ -937,8 +937,9 @@
         renderChips("goals", goals);
 
         const stored = AppState.user;
+        const ageInput = document.getElementById("ageInput");
         if (stored) {
-          document.getElementById("ageInput").value = stored.age || "";
+          ageInput.value = stored.age || "";
           document.getElementById("genderInput").value = stored.gender || "";
           if (stored.liked_genres) {
             stored.liked_genres.forEach(g => {
@@ -963,8 +964,8 @@
           }
         }
 
-        document.getElementById("ageInput").addEventListener("input", () => {
-          const v = Number(document.getElementById("ageInput").value || 0);
+        ageInput.addEventListener("input", () => {
+          const v = Number(ageInput.value || 0);
           const allow = document.getElementById("allowAdult");
           if (v < 18) {
             allow.checked = false;
@@ -973,6 +974,10 @@
             allow.disabled = false;
           }
         });
+
+        if (stored?.age) {
+          ageInput.dispatchEvent(new Event("input"));
+        }
       },
 
       saveOnboarding() {
@@ -1010,7 +1015,7 @@
             <div class="card">
               <div class="form-group">
                 <label class="form-label">Mood intensity</label>
-                <input type="range" id="moodSlider" class="mood-slider" min="1" max="10" value="5">
+                <input type="range" id="moodSlider" class="mood-slider" min="1" max="10" value="5" aria-describedby="moodLabel">
                 <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.78rem;color:var(--text-muted);">
                   <span>Low energy</span>
                   <span id="moodLabel">Neutral (5)</span>
@@ -1128,6 +1133,10 @@
           c.innerHTML = `
             <div class="card">
               <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
+              <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;">
+                <button class="btn btn-primary" onclick="Router.navigate('onboarding')">Set up profile</button>
+                <button class="btn btn-secondary" onclick="Router.navigate('check-in')">Do mood check-in</button>
+              </div>
             </div>
           `;
           return;
@@ -1161,6 +1170,7 @@
               <div class="card">
                 <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
                 <p class="small-text">${(json && json.error) || ""}</p>
+                <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
               </div>
             `;
             return;
@@ -1172,6 +1182,7 @@
             <div class="card">
               <p class="small-text">Network error while getting recommendations.</p>
               <p class="small-text">${e.message || e}</p>
+              <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
             </div>
           `;
         }
@@ -1195,7 +1206,6 @@
           const genres = (r.genres || []).slice(0, 3);
           const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
           const type = r.type === "show" ? "Series" : "Movie";
-          const safeId = r.id.replace(/"/g, "&quot;");
           const jsonStr = encodeURIComponent(JSON.stringify(r));
           return `
             <div class="title-card" data-title='${jsonStr}'>
@@ -1209,12 +1219,12 @@
                     ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
                   </div>
                 </div>
-                <button class="btn-ghost" onclick="event.stopPropagation(); Views.toggleWatchlist('${safeId}')">
+                <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
                   ⭐
                 </button>
               </div>
               ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-              ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+              ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
               ${Views.renderStreamingRowHtml(name)}
             </div>
           `;
@@ -1233,6 +1243,14 @@
             const obj = JSON.parse(decodeURIComponent(encoded));
             AppState.selectedTitle = obj;
             Router.navigate("detail", { title: obj });
+          });
+        });
+        // attach handlers for watchlist toggles
+        document.querySelectorAll(".watchlist-toggle").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            Views.toggleWatchlist(id);
           });
         });
       },
@@ -1255,8 +1273,9 @@
       },
 
       toggleWatchlist(id) {
-        const item = AppState.recommendations.find(r => r.id === id) ||
-                     AppState.watchlist.find(r => r.id === id);
+        const item =
+          AppState.recommendations.find(r => r.id === id) ||
+          AppState.watchlist.find(r => r.id === id);
         if (!item) return;
         const exists = AppState.watchlist.find(r => r.id === id);
         if (exists) {
@@ -1297,6 +1316,11 @@
                 <div class="detail-section-title">Watch it on</div>
                 ${Views.renderStreamingRowHtml(name)}
               </div>
+              <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary" id="detailWatchlistBtn">
+                  ☆ Add to watchlist
+                </button>
+              </div>
               <div id="detailMeta" style="margin-top:1rem;"></div>
             </div>
           </div>
@@ -1304,6 +1328,9 @@
       },
 
       async initDetail(title) {
+        // watchlist button setup
+        Views.setupDetailWatchlist(title);
+
         const container = document.getElementById("detailMeta");
         const cacheKey = `${title.type}-${title.tmdb_id}`;
         if (AppState.detailsCache[cacheKey]) {
@@ -1320,7 +1347,7 @@
           const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: title.id })
+            body: JSON.stringify({ id: title.tmdb_id })
           });
           const json = await res.json();
           if (!res.ok) {
@@ -1332,6 +1359,30 @@
         } catch (e) {
           container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
         }
+      },
+
+      setupDetailWatchlist(title) {
+        const btn = document.getElementById("detailWatchlistBtn");
+        if (!btn) return;
+
+        const updateLabel = () => {
+          const inList = AppState.watchlist.some(item => item.id === title.id);
+          btn.textContent = inList ? "⭐ In watchlist" : "☆ Add to watchlist";
+        };
+
+        updateLabel();
+
+        btn.onclick = () => {
+          const inList = AppState.watchlist.some(item => item.id === title.id);
+          if (inList) {
+            AppState.removeFromWatchlist(title.id);
+            Views.showToast("Removed from watchlist");
+          } else {
+            AppState.addToWatchlist(title);
+            Views.showToast("Added to watchlist");
+          }
+          updateLabel();
+        };
       },
 
       renderDetailMeta(details, container) {
@@ -1411,7 +1462,7 @@
                     ${genres ? `<span class="badge">${genres}</span>` : ""}
                   </div>
                 </div>
-                <button class="btn-ghost" onclick="event.stopPropagation(); Views.removeFromWatchlist('${r.id.replace(/"/g, "&quot;")}')">
+                <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
                   🗑️
                 </button>
               </div>
@@ -1440,10 +1491,18 @@
             Router.navigate("detail", { title: obj });
           });
         });
+        document.querySelectorAll(".watchlist-remove").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            Views.removeFromWatchlist(id);
+          });
+        });
       },
 
       removeFromWatchlist(id) {
         AppState.removeFromWatchlist(id);
+        Views.showToast("Removed from watchlist");
         Router.navigate("watchlist");
       },
 
