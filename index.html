@@ -1390,7 +1390,7 @@
         }
 
         const container = document.getElementById("detailMeta");
-        const cacheKey = \`\${title.type}-\${title.tmdb_id}\`;
+        const cacheKey = `${title.type}-${title.tmdb_id}`;
         if (AppState.detailsCache[cacheKey]) {
           Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
           return;
