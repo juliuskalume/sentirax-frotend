@@ -1327,8 +1327,9 @@
         const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
 
         const posterUrl = title.poster_path
-          ? \`https://image.tmdb.org/t/p/w500\${title.poster_path}\`
-          : null;
+  ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+  : null;
+
 
         return `
           <div class="center-block">
