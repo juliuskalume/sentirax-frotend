@@ -1388,165 +1388,188 @@
       },
 
       detail(title) {
-        const name = title.name || title.title || "Untitled";
-        const type = title.type === "show" ? "Series" : "Movie";
-        const genres = (title.genres || []).join(", ");
-        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+  const name = title.name || title.title || "Untitled";
+  const type = title.type === "show" ? "Series" : "Movie";
+  const genres = (title.genres || []).join(", ");
+  const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
 
-        const posterUrl = title.poster_path
-  ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
-  : null;
+  const posterUrl = title.poster_path
+    ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+    : null;
 
-
-        return `
-          <div class="center-block">
-            <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
-            <div class="card" style="margin-top:1rem;">
-              ${posterUrl ? `
-                <img
-                  class="title-banner"
-                  src="${posterUrl}"
-                  alt="${name} poster"
-                  loading="lazy"
-                />
-              ` : ""}
-              <div class="section-label">Title</div>
-              <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
-              <p class="small-text" style="margin-bottom:.6rem;">
-                ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
-                ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
-              </p>
-              <p class="small-text" style="margin-top:.8rem;">
-                ${title.summary || "Plot summary will appear once details load."}
-              </p>
-              ${title.reason ? `
-                <div style="margin-top:1rem;">
-                  <div class="detail-section-title">Why SentiraX picked this</div>
-                  <p class="small-text">${title.reason}</p>
-                </div>
-              ` : ""}
-              <div style="margin-top:1rem;">
-                <div class="detail-section-title">Watch it on</div>
-                ${Views.renderStreamingRowHtml(name)}
-              </div>
-              <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
-                <button class="btn btn-secondary" id="detailWatchlistBtn">
-                  ☆ Add to watchlist
-                </button>
-                <button class="btn btn-secondary" onclick="Views.openWikiFullscreen(
-  '${wiki.wiki_title}',
-  `${wiki.summary.replace(/`/g, "\\`")}`,
-  '${wiki.url}'
-)">Read full Wikipedia details</button>
-              </div>
-              <div id="detailMeta" style="margin-top:1rem;"></div>
-              <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
-            </div>
+  return `
+    <div class="center-block">
+      <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
+      <div class="card" style="margin-top:1rem;">
+        ${posterUrl ? `
+          <img
+            class="title-banner"
+            src="${posterUrl}"
+            alt="${name} poster"
+            loading="lazy"
+          />
+        ` : ""}
+        <div class="section-label">Title</div>
+        <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
+        <p class="small-text" style="margin-bottom:.6rem;">
+          ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
+          ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
+        </p>
+        <p class="small-text" style="margin-top:.8rem;">
+          ${title.summary || "Plot summary will appear once details load."}
+        </p>
+        ${title.reason ? `
+          <div style="margin-top:1rem;">
+            <div class="detail-section-title">Why SentiraX picked this</div>
+            <p class="small-text">${title.reason}</p>
           </div>
-        `;
-      },
+        ` : ""}
+        <div style="margin-top:1rem;">
+          <div class="detail-section-title">Watch it on</div>
+          ${Views.renderStreamingRowHtml(name)}
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="detailWatchlistBtn">
+            ☆ Add to watchlist
+          </button>
+          <button class="btn btn-secondary" id="wikiDetailsBtn">
+            📖 See full details (Wikipedia)
+          </button>
+        </div>
+        <div id="detailMeta" style="margin-top:1rem;"></div>
+        <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  `;
+},
 
       async initDetail(title) {
-        // watchlist button setup
-        Views.setupDetailWatchlist(title);
+  // Watchlist button
+  Views.setupDetailWatchlist(title);
 
-        // Wikipedia full details button
-        const wikiBtn = document.getElementById("wikiDetailsBtn");
-        if (wikiBtn) {
-          wikiBtn.addEventListener("click", () => {
-            Views.fetchWikiDetails(title);
-          });
-        }
+  // Wikipedia button
+  const wikiBtn = document.getElementById("wikiDetailsBtn");
+  if (wikiBtn) {
+    wikiBtn.addEventListener("click", () => {
+      Views.fetchWikiDetails(title);
+    });
+  }
 
-        const container = document.getElementById("detailMeta");
-        const cacheKey = `${title.type}-${title.tmdb_id}`;
-        if (AppState.detailsCache[cacheKey]) {
-          Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
-          return;
-        }
-        container.innerHTML = `
-          <div class="loading">
-            <div class="spinner"></div>
-            <p class="small-text">Loading cast and watch providers...</p>
-          </div>
-        `;
-        try {
-          const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: title.tmdb_id })
-          });
-          const json = await res.json();
-          if (!res.ok) {
-            container.innerHTML = `<p class="small-text">Could not load extra details.</p>`;
-            return;
-          }
-          AppState.detailsCache[cacheKey] = json;
-          Views.renderDetailMeta(json, container);
-        } catch (e) {
-          container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
-        }
-      },
+  // TMDB meta (cast + providers)
+  const container = document.getElementById("detailMeta");
+  const cacheKey = `${title.type}-${title.tmdb_id}`;
+  if (AppState.detailsCache[cacheKey]) {
+    Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
+    return;
+  }
+  container.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p class="small-text">Loading cast and watch providers...</p>
+    </div>
+  `;
+  try {
+    const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: title.tmdb_id })
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      container.innerHTML = `<p class="small-text">Could not load extra details.</p>`;
+      return;
+    }
+    AppState.detailsCache[cacheKey] = json;
+    Views.renderDetailMeta(json, container);
+  } catch (e) {
+    container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
+  }
+},
 
       async fetchWikiDetails(title) {
-        const btn = document.getElementById("wikiDetailsBtn");
-        const container = document.getElementById("wikiDetailsContainer");
-        if (!btn || !container) return;
+  const btn = document.getElementById("wikiDetailsBtn");
+  const container = document.getElementById("wikiDetailsContainer");
+  if (!btn || !container) return;
 
-        const name = title.name || title.title || "Untitled";
+  const name = title.name || title.title || "Untitled";
+  const year = title.release_year || title.year || null;
 
-        const year =
-          title.release_year ||
-          title.year ||
-          null;
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading from Wikipedia...";
 
-        const originalLabel = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = "Loading from Wikipedia...";
-        container.innerHTML = `
-          <div class="loading">
-            <div class="spinner"></div>
-            <p class="small-text">Pulling full details from Wikipedia...</p>
-          </div>
-        `;
+  container.innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <p class="small-text">Pulling full details from Wikipedia...</p>
+    </div>
+  `;
 
-        try {
-          const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: name, year })
-          });
-          const data = await res.json();
+  try {
+    const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: name, year })
+    });
+    const data = await res.json();
 
-          if (!res.ok || !data.html) {
-            container.innerHTML = `
-              <p class="small-text">Couldn’t load Wikipedia details for this title.</p>
-            `;
-            return;
-          }
+    if (!res.ok || (!data.html && !data.summary)) {
+      container.innerHTML = `
+        <p class="small-text">Couldn’t load Wikipedia details for this title.</p>
+      `;
+      return;
+    }
 
-          container.innerHTML = `
-            <div class="detail-section-title">From Wikipedia</div>
-            <div class="small-text" style="max-height: 400px; overflow:auto; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 0.75rem; background: #020617;">
-              ${data.html}
-            </div>
-            ${data.url ? `
-              <p class="small-text" style="margin-top:.4rem;">
-                <a href="${data.url}" target="_blank" rel="noopener noreferrer">
-                  Open on Wikipedia →
-                </a>
-              </p>
-            ` : ""}
-          `;
-        } catch (e) {
-          container.innerHTML = `
-            <p class="small-text">Error loading Wikipedia details: ${e.message || e}</p>
-          `;
-        } finally {
-          btn.disabled = false;
-          btn.textContent = originalLabel;
-        }
-      },
+    const wikiTitle = data.wiki_title || name;
+    const wikiHtml = data.html || `<p class="small-text">${data.summary || "No details available."}</p>`;
+    const wikiUrl = data.url || null;
+
+    // Build the preview area using DOM APIs to avoid escaping issues
+    container.innerHTML = "";
+
+    const heading = document.createElement("div");
+    heading.className = "detail-section-title";
+    heading.textContent = "From Wikipedia";
+    container.appendChild(heading);
+
+    const box = document.createElement("div");
+    box.className = "small-text";
+    box.style.maxHeight = "260px";
+    box.style.overflow = "auto";
+    box.style.border = "1px solid var(--border-subtle)";
+    box.style.borderRadius = "10px";
+    box.style.padding = "0.75rem";
+    box.style.background = "#020617";
+    box.innerHTML = wikiHtml;
+    container.appendChild(box);
+
+    if (wikiUrl) {
+      const p = document.createElement("p");
+      p.className = "small-text";
+      p.style.marginTop = ".4rem";
+      p.innerHTML = `<a href="${wikiUrl}" target="_blank" rel="noopener noreferrer">Open on Wikipedia →</a>`;
+      container.appendChild(p);
+    }
+
+    // Fullscreen button
+    const fullBtn = document.createElement("button");
+    fullBtn.className = "btn btn-secondary";
+    fullBtn.style.marginTop = "0.6rem";
+    fullBtn.type = "button";
+    fullBtn.textContent = "Read full Wikipedia details";
+    fullBtn.addEventListener("click", () => {
+      Views.openWikiFullscreen(wikiTitle, wikiHtml, wikiUrl);
+    });
+    container.appendChild(fullBtn);
+  } catch (e) {
+    container.innerHTML = `
+      <p class="small-text">Error loading Wikipedia details: ${e.message || e}</p>
+    `;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+},
 
       setupDetailWatchlist(title) {
         const btn = document.getElementById("detailWatchlistBtn");
@@ -1808,18 +1831,26 @@
         }, 1500);
       },
 
-      openWikiFullscreen(title, text, link) {
+      openWikiFullscreen(title, html, url) {
   const modal = document.getElementById("wikiFullscreen");
-  document.getElementById("wikiFullscreenTitle").textContent = title;
-  document.getElementById("wikiFullscreenText").textContent = text;
-  document.getElementById("wikiFullscreenLink").innerHTML =
-    link ? `<a href="${link}" target="_blank" class="small-text">Open Wikipedia →</a>` : "";
+  const titleEl = document.getElementById("wikiFullscreenTitle");
+  const textEl = document.getElementById("wikiFullscreenText");
+  const linkEl = document.getElementById("wikiFullscreenLink");
+
+  if (!modal || !titleEl || !textEl || !linkEl) return;
+
+  titleEl.textContent = title || "Wikipedia details";
+  textEl.innerHTML = html || "<p class=\"small-text\">No details available.</p>";
+  linkEl.innerHTML = url
+    ? `<a href="${url}" target="_blank" rel="noopener noreferrer" class="small-text">Open on Wikipedia →</a>`
+    : "";
 
   modal.classList.remove("hidden");
 },
 
 closeWikiFullscreen() {
-  document.getElementById("wikiFullscreen").classList.add("hidden");
+  const modal = document.getElementById("wikiFullscreen");
+  if (modal) modal.classList.add("hidden");
 }
     };
 
@@ -1843,14 +1874,21 @@ closeWikiFullscreen() {
     }
   </script>
   
-  <div id="wikiFullscreen" class="wiki-modal hidden">
-  <div class="wiki-modal-content">
-    <button class="wiki-close-btn" onclick="Views.closeWikiFullscreen()">✕</button>
-    <h2 id="wikiFullscreenTitle"></h2>
-    <p id="wikiFullscreenText"></p>
-    <p id="wikiFullscreenLink"></p>
+  <!-- Fullscreen Wikipedia modal -->
+<div id="wikiFullscreen" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width: 720px; max-height: 90vh; overflow: hidden; display:flex; flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+      <h3 id="wikiFullscreenTitle" style="margin:0;font-size:1.1rem;"></h3>
+      <button class="btn-ghost" type="button" onclick="Views.closeWikiFullscreen()">✕</button>
+    </div>
+    <div id="wikiFullscreenText"
+         class="small-text"
+         style="flex:1; overflow:auto; border:1px solid var(--border-subtle); border-radius:10px; padding:0.75rem; background:#020617;">
+    </div>
+    <div id="wikiFullscreenLink" style="margin-top:.5rem;"></div>
   </div>
 </div>
+
 
 </body>
 </html>
