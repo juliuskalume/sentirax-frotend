@@ -742,6 +742,7 @@
       currentView: "welcome",
       lastCheckIn: null,
       recommendations: [],
+      lastSummary: "",
       selectedTitle: null,
       detailsCache: {},
 
@@ -1139,65 +1140,76 @@
       },
 
       async initRecommendations() {
-        if (!AppState.user || !AppState.lastCheckIn) {
-          const c = document.getElementById("recsContainer");
-          c.innerHTML = `
-            <div class="card">
-              <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
-              <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;">
-                <button class="btn btn-primary" onclick="Router.navigate('onboarding')">Set up profile</button>
-                <button class="btn btn-secondary" onclick="Router.navigate('check-in')">Do mood check-in</button>
-              </div>
-            </div>
-          `;
-          return;
-        }
-        await Views.fetchRecommendations();
-      },
+  const c = document.getElementById("recsContainer");
+
+  // If we already have recs, just reuse them – no backend call
+  if (AppState.recommendations && AppState.recommendations.length) {
+    Views.renderRecommendations(AppState.lastSummary, AppState.recommendations);
+    return;
+  }
+
+  if (!AppState.user || !AppState.lastCheckIn) {
+    c.innerHTML = `
+      <div class="card">
+        <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
+        <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;">
+          <button class="btn btn-primary" onclick="Router.navigate('onboarding')">Set up profile</button>
+          <button class="btn btn-secondary" onclick="Router.navigate('check-in')">Do mood check-in</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  await Views.fetchRecommendations();
+},
 
       async fetchRecommendations() {
-        const c = document.getElementById("recsContainer");
-        c.innerHTML = `
-          <div class="card">
-            <div class="loading">
-              <div class="spinner"></div>
-              <p class="small-text">Re-ranking titles for you...</p>
-            </div>
-          </div>
-        `;
-        try {
-          const body = {
-            user_profile: AppState.user,
-            check_in: AppState.lastCheckIn
-          };
-          const res = await fetch(BACKEND_BASE_URL + "/api/recommend", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
-          });
-          const json = await res.json();
-          if (!res.ok) {
-            c.innerHTML = `
-              <div class="card">
-                <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
-                <p class="small-text">${(json && json.error) || ""}</p>
-                <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
-              </div>
-            `;
-            return;
-          }
-          AppState.recommendations = json.recommendations || [];
-          Views.renderRecommendations(json.high_level_summary, AppState.recommendations);
-        } catch (e) {
-          c.innerHTML = `
-            <div class="card">
-              <p class="small-text">Network error while getting recommendations.</p>
-              <p class="small-text">${e.message || e}</p>
-              <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
-            </div>
-          `;
-        }
-      },
+  const c = document.getElementById("recsContainer");
+  c.innerHTML = `
+    <div class="card">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p class="small-text">Re-ranking titles for you...</p>
+      </div>
+    </div>
+  `;
+  try {
+    const body = {
+      user_profile: AppState.user,
+      check_in: AppState.lastCheckIn
+    };
+    const res = await fetch(BACKEND_BASE_URL + "/api/recommend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      c.innerHTML = `
+        <div class="card">
+          <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
+          <p class="small-text">${(json && json.error) || ""}</p>
+          <p class="small-text">${(json && json.details) || ""}</p>
+          <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
+        </div>
+      `;
+      return;
+    }
+
+    AppState.recommendations = json.recommendations || [];
+    AppState.lastSummary = json.high_level_summary || "";
+    Views.renderRecommendations(json.high_level_summary, AppState.recommendations);
+  } catch (e) {
+    c.innerHTML = `
+      <div class="card">
+        <p class="small-text">Network error while getting recommendations.</p>
+        <p class="small-text">${e.message || e}</p>
+        <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
+      </div>
+    `;
+  }
+},
 
       renderRecommendations(summary, recs) {
   const c = document.getElementById("recsContainer");
@@ -1310,9 +1322,10 @@
       },
 
       refreshRecommendations() {
-        AppState.recommendations = [];
-        Views.fetchRecommendations();
-      },
+  AppState.recommendations = [];
+  AppState.lastSummary = "";
+  Views.fetchRecommendations();
+},
 
       toggleWatchlist(id) {
         const item =
