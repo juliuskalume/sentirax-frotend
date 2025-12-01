@@ -1584,20 +1584,13 @@
     box.innerHTML = wikiHtml;
     container.appendChild(box);
 
-    if (wikiUrl) {
-      const p = document.createElement("p");
-      p.className = "small-text";
-      p.style.marginTop = ".4rem";
-      p.innerHTML = `<a href="${wikiUrl}" target="_blank" rel="noopener noreferrer">Open on Wikipedia →</a>`;
-      container.appendChild(p);
-    }
 
     // Fullscreen button
     const fullBtn = document.createElement("button");
     fullBtn.className = "btn btn-secondary";
     fullBtn.style.marginTop = "0.6rem";
     fullBtn.type = "button";
-    fullBtn.textContent = "Read full Wikipedia details";
+    fullBtn.textContent = "Expand";
     fullBtn.addEventListener("click", () => {
       Views.openWikiFullscreen(wikiTitle, wikiHtml, wikiUrl);
     });
