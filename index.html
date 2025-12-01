@@ -293,8 +293,8 @@
   </div>
 
   <script>
-    // ===== API base URL: change this to your Render backend in production =====
-    const RENDER_BACKEND_URL = "https://YOUR-RENDER-SERVICE.onrender.com"; // e.g. https://sentirax-api.onrender.com
+    // ===== API base URL (Render backend, production) =====
+    const RENDER_BACKEND_URL = "https://sentirax-backend.onrender.com";
 
     function getApiBase() {
       if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
@@ -351,7 +351,7 @@
         .map(ch => ch.dataset.value);
     }
 
-    // -------- local "profile" state (simple, stored in localStorage) --------
+    // -------- local "profile" state (stored in localStorage) --------
     function saveProfileToStorage(profile) {
       localStorage.setItem("sentirax_profile", JSON.stringify(profile));
     }
