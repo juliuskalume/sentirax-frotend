@@ -1324,7 +1324,7 @@
         const name = title.name || title.title || "Untitled";
         const type = title.type === "show" ? "Series" : "Movie";
         const genres = (title.genres || []).join(", ");
-        const runtime = title.runtime_minutes ? \`\${title.runtime_minutes} min\` : null;
+        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
 
         const posterUrl = title.poster_path
           ? \`https://image.tmdb.org/t/p/w500\${title.poster_path}\`
