@@ -1567,7 +1567,7 @@
           const name = r.name || r.title || "Untitled";
           const type = r.type === "show" ? "Series" : "Movie";
           const genres = (r.genres || []).slice(0,3).join(", ");
-          const runtime = r.runtime_minutes ? \`\${r.runtime_minutes} min\` : "";
+          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
           const jsonStr = encodeURIComponent(JSON.stringify(r));
           return `
             <div class="title-card" data-title='${jsonStr}'>
