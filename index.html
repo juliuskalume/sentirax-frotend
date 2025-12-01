@@ -62,7 +62,6 @@
       color: #9ca3af;
     }
     input[type="number"],
-    input[type="text"],
     select,
     textarea {
       width: 100%;
@@ -75,7 +74,6 @@
       box-sizing: border-box;
     }
     input[type="number"]:focus,
-    input[type="text"]:focus,
     select:focus,
     textarea:focus {
       outline: none;
@@ -111,19 +109,23 @@
       color: #022c22;
     }
     button {
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 999px;
       border: none;
       background: linear-gradient(135deg, #22c55e, #22d3ee);
       color: #022c22;
       font-weight: 600;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       cursor: pointer;
-      margin-top: 6px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
       box-shadow: 0 10px 25px rgba(34, 197, 94, 0.25);
+    }
+    button.main {
+      margin-top: 6px;
+      font-size: 0.9rem;
+      padding: 10px 16px;
     }
     button:disabled {
       opacity: 0.5;
@@ -149,6 +151,12 @@
       border-top: 1px solid #1f2937;
       padding-top: 10px;
       margin-top: 10px;
+    }
+    .rec-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
     }
     .badge {
       display: inline-flex;
@@ -179,6 +187,47 @@
       letter-spacing: 0.08em;
       color: #6b7280;
       margin-bottom: 6px;
+    }
+    .detail-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    ul.cast-list {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+    }
+    ul.cast-list li {
+      font-size: 0.8rem;
+      color: #d1d5db;
+      margin-bottom: 2px;
+    }
+    .providers-groups {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .provider-group {
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      padding: 6px 8px;
+      background: #020617;
+    }
+    .provider-group-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 2px;
+    }
+    .provider-name {
+      font-size: 0.8rem;
+      color: #e5e7eb;
     }
     @media (max-width: 600px) {
       .container {
@@ -244,7 +293,7 @@
         <p class="small">Only available if you’re 18+. You can change this later.</p>
       </div>
 
-      <button id="save-profile-btn">Continue to mood check-in →</button>
+      <button class="main" id="save-profile-btn">Continue to mood check-in →</button>
       <div id="profile-status" class="small"></div>
     </div>
 
@@ -280,7 +329,7 @@
         <input type="number" id="max-duration" min="10" max="300" placeholder="120" />
       </div>
 
-      <button id="get-recs-btn">Get SentiraX picks</button>
+      <button class="main" id="get-recs-btn">Get SentiraX picks</button>
       <div id="loading" class="small hidden">Thinking about your mood and options...</div>
       <div id="checkin-error" class="error hidden"></div>
 
@@ -288,6 +337,23 @@
         <h3>Your SentiraX suggestions</h3>
         <p id="summary" class="small"></p>
         <div id="recommendations-list"></div>
+      </div>
+
+      <div id="details-card" class="card hidden" style="margin-top:16px;">
+        <h3 id="details-title">Details</h3>
+        <p id="details-overview" class="small"></p>
+        <p id="details-meta" class="small"></p>
+
+        <div id="details-cast-section" class="hidden">
+          <div class="detail-section-title">Cast</div>
+          <ul id="details-cast" class="cast-list"></ul>
+        </div>
+
+        <div id="details-watch-section" class="hidden">
+          <div class="detail-section-title">Where to watch</div>
+          <div id="details-watch" class="providers-groups"></div>
+          <p class="small" style="margin-top:4px;">Availability and region data via TMDB; may vary by location.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -442,6 +508,105 @@
       showCheckinCard();
     });
 
+    // -------- details panel helpers --------
+    async function fetchTitleDetails(id) {
+      const detailsCard = document.getElementById("details-card");
+      const titleEl = document.getElementById("details-title");
+      const overviewEl = document.getElementById("details-overview");
+      const metaEl = document.getElementById("details-meta");
+      const castSection = document.getElementById("details-cast-section");
+      const castList = document.getElementById("details-cast");
+      const watchSection = document.getElementById("details-watch-section");
+      const watchContainer = document.getElementById("details-watch");
+
+      detailsCard.classList.remove("hidden");
+      titleEl.textContent = "Loading details...";
+      overviewEl.textContent = "";
+      metaEl.textContent = "";
+      castSection.classList.add("hidden");
+      watchSection.classList.add("hidden");
+      castList.innerHTML = "";
+      watchContainer.innerHTML = "";
+
+      try {
+        const res = await fetch(`${getApiBase()}/api/title-details`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }) // backend parses "movie-12345"
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch details");
+
+        const data = await res.json();
+
+        titleEl.textContent = data.name || "Details";
+        overviewEl.textContent = data.overview || "No summary available.";
+
+        const metaBits = [];
+        if (data.type) metaBits.push(data.type === "movie" ? "Movie" : "Series");
+        if (data.release_date) metaBits.push(`Released: ${data.release_date}`);
+        if (data.runtime_minutes) metaBits.push(`${data.runtime_minutes} min`);
+        if (data.genres && data.genres.length) metaBits.push(`Genres: ${data.genres.join(", ")}`);
+        if (data.vote_average) metaBits.push(`Rating: ${data.vote_average.toFixed(1)}/10`);
+
+        metaEl.textContent = metaBits.join(" • ");
+
+        // Cast
+        if (data.cast && data.cast.length) {
+          castList.innerHTML = "";
+          data.cast.forEach(c => {
+            const li = document.createElement("li");
+            li.textContent = c.character
+              ? `${c.name} as ${c.character}`
+              : c.name;
+            castList.appendChild(li);
+          });
+          castSection.classList.remove("hidden");
+        }
+
+        // Watch providers
+        const wp = data.watch_providers || {};
+        const groups = [
+          { key: "flatrate", label: "Streaming" },
+          { key: "rent", label: "Rent" },
+          { key: "buy", label: "Buy" }
+        ];
+
+        let hasProviders = false;
+        groups.forEach(g => {
+          const list = wp[g.key] || [];
+          if (!list.length) return;
+          hasProviders = true;
+          const groupDiv = document.createElement("div");
+          groupDiv.className = "provider-group";
+
+          const title = document.createElement("div");
+          title.className = "provider-group-title";
+          title.textContent = g.label;
+          groupDiv.appendChild(title);
+
+          const names = document.createElement("div");
+          list.forEach((p, idx) => {
+            const span = document.createElement("span");
+            span.className = "provider-name";
+            span.textContent = p.provider_name + (idx < list.length - 1 ? ", " : "");
+            names.appendChild(span);
+          });
+          groupDiv.appendChild(names);
+
+          watchContainer.appendChild(groupDiv);
+        });
+
+        if (hasProviders) {
+          watchSection.classList.remove("hidden");
+        }
+      } catch (err) {
+        console.error(err);
+        titleEl.textContent = "Could not load details";
+        overviewEl.textContent = "Something went wrong while fetching more information.";
+      }
+    }
+
     // -------- check-in submit --------
     document.getElementById("get-recs-btn").addEventListener("click", async () => {
       const profile = loadProfileFromStorage();
@@ -471,9 +636,11 @@
       const recList = document.getElementById("recommendations-list");
       const summaryEl = document.getElementById("summary");
       const errorEl = document.getElementById("checkin-error");
+      const detailsCard = document.getElementById("details-card");
 
       loadingEl.classList.remove("hidden");
       recCard.classList.add("hidden");
+      detailsCard.classList.add("hidden");
       errorEl.classList.add("hidden");
       errorEl.textContent = "";
 
@@ -495,20 +662,17 @@
           const div = document.createElement("div");
           div.className = "recommendation";
 
+          const header = document.createElement("div");
+          header.className = "rec-header";
+
+          const titleWrap = document.createElement("div");
           const title = document.createElement("h4");
           title.textContent = item.name || item.title || "Untitled";
-          div.appendChild(title);
-
-          if (item.summary) {
-            const p = document.createElement("p");
-            p.className = "small";
-            p.textContent = item.summary;
-            div.appendChild(p);
-          }
+          titleWrap.appendChild(title);
 
           const meta = document.createElement("div");
           if (item.genres && item.genres.length) {
-            item.genres.forEach(g => {
+            item.genres.slice(0, 3).forEach(g => {
               const span = document.createElement("span");
               span.className = "badge";
               span.textContent = g;
@@ -527,7 +691,25 @@
             span.textContent = "18+";
             meta.appendChild(span);
           }
-          if (meta.children.length) div.appendChild(meta);
+          titleWrap.appendChild(meta);
+          header.appendChild(titleWrap);
+
+          const btn = document.createElement("button");
+          btn.textContent = "More details";
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            fetchTitleDetails(item.id);
+          });
+          header.appendChild(btn);
+
+          div.appendChild(header);
+
+          if (item.summary) {
+            const p = document.createElement("p");
+            p.className = "small";
+            p.textContent = item.summary;
+            div.appendChild(p);
+          }
 
           if (item.reason) {
             const reason = document.createElement("p");
