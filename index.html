@@ -1200,85 +1200,93 @@
       },
 
       renderRecommendations(summary, recs) {
-        const c = document.getElementById("recsContainer");
-        if (!recs || !recs.length) {
-          c.innerHTML = `
-            <div class="card">
-              <p class="small-text">No suitable titles came back. Try broadening your mood / filters.</p>
+  const c = document.getElementById("recsContainer");
+  if (!recs || !recs.length) {
+    c.innerHTML = `
+      <div class="card">
+        <p class="small-text">No suitable titles came back. Try broadening your mood / filters.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const summaryHtml = summary
+    ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
+    : "";
+
+  const itemsHtml = recs.map((r) => {
+    const name = r.name || r.title || "Untitled";
+    const genres = (r.genres || []).slice(0, 3);
+    const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
+    const type = r.type === "show" ? "Series" : "Movie";
+    const jsonStr = encodeURIComponent(JSON.stringify(r));
+
+    const posterUrl = r.poster_path
+      ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
+      : null;
+
+    const posterHtml = posterUrl
+      ? `
+        <img
+          class="title-banner"
+          src="${posterUrl}"
+          alt="${name} poster"
+          loading="lazy"
+        />
+      `
+      : "";
+
+    return `
+      <div class="title-card" data-title='${jsonStr}'>
+        ${posterHtml}
+        <div class="title-header">
+          <div class="title-main">
+            <div class="title-name">${name}</div>
+            <div class="badge-row">
+              <span class="badge badge-type">${type}</span>
+              ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+              ${genres.map((g) => `<span class="badge">${g}</span>`).join("")}
+              ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
             </div>
-          `;
-          return;
-        }
-        const summaryHtml = summary
-          ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
-          : "";
-        const itemsHtml = recs.map(r => {
-          const name = r.name || r.title || "Untitled";
-          const genres = (r.genres || []).slice(0, 3);
-          const runtime = r.runtime_minutes ? \`\${r.runtime_minutes} min\` : null;
-          const type = r.type === "show" ? "Series" : "Movie";
-          const jsonStr = encodeURIComponent(JSON.stringify(r));
-
-          const posterUrl = r.poster_path
-            ? \`https://image.tmdb.org/t/p/w342\${r.poster_path}\`
-            : null;
-
-          return `
-            <div class="title-card" data-title='${jsonStr}'>
-              ${posterUrl ? `
-                <img
-                  class="title-banner"
-                  src="${posterUrl}"
-                  alt="${name} poster"
-                  loading="lazy"
-                />
-              ` : ""}
-              <div class="title-header">
-                <div class="title-main">
-                  <div class="title-name">${name}</div>
-                  <div class="badge-row">
-                    <span class="badge badge-type">${type}</span>
-                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-                    ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
-                    ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
-                  </div>
-                </div>
-                <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-                  ⭐
-                </button>
-              </div>
-              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-              ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
-              ${Views.renderStreamingRowHtml(name)}
-            </div>
-          `;
-        }).join("");
-
-        c.innerHTML = `
-          <div class="card">
-            ${summaryHtml}
-            ${itemsHtml}
           </div>
-        `;
-        // attach click handlers for detail navigation
-        document.querySelectorAll(".title-card").forEach(card => {
-          card.addEventListener("click", () => {
-            const encoded = card.getAttribute("data-title");
-            if (!encoded) return;
-            const obj = JSON.parse(decodeURIComponent(encoded));
-            AppState.selectedTitle = obj;
-            Router.navigate("detail", { title: obj });
-          });
-        });
-        // attach handlers for watchlist toggles
-        document.querySelectorAll(".watchlist-toggle").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            Views.toggleWatchlist(id);
-          });
-        });
-      },
+          <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+            ⭐
+          </button>
+        </div>
+        ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+        ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+        ${Views.renderStreamingRowHtml(name)}
+      </div>
+    `;
+  }).join("");
+
+  c.innerHTML = `
+    <div class="card">
+      ${summaryHtml}
+      ${itemsHtml}
+    </div>
+  `;
+
+  // detail navigation
+  document.querySelectorAll(".title-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const encoded = card.getAttribute("data-title");
+      if (!encoded) return;
+      const obj = JSON.parse(decodeURIComponent(encoded));
+      AppState.selectedTitle = obj;
+      Router.navigate("detail", { title: obj });
+    });
+  });
+
+  // watchlist toggles
+  document.querySelectorAll(".watchlist-toggle").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      Views.toggleWatchlist(id);
+    });
+  });
+},
 
       renderStreamingRowHtml(title) {
         const q = encodeURIComponent(title);
