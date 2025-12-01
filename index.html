@@ -1500,7 +1500,7 @@
   const container = document.getElementById("detailMeta");
   const cacheKey = `${title.type}-${title.tmdb_id}`;
   if (AppState.detailsCache[cacheKey]) {
-    Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
+    Views.renderDetailMeta(AppState.detailsCache[cacheKey], container, title);
     return;
   }
   container.innerHTML = `
@@ -1521,7 +1521,7 @@
       return;
     }
     AppState.detailsCache[cacheKey] = json;
-    Views.renderDetailMeta(json, container);
+    Views.renderDetailMeta(json, container, title);
   } catch (e) {
     container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
   }
@@ -1629,53 +1629,98 @@
         };
       },
 
-      renderDetailMeta(details, container) {
-        const cast = details.cast || [];
-        const wp = details.watch_providers || {};
-        const groups = [
-          { key:"flatrate", label:"Streaming" },
-          { key:"rent", label:"Rent" },
-          { key:"buy", label:"Buy" }
-        ];
-        let castHtml = "";
-        if (cast.length) {
-          castHtml = `
-            <div class="detail-section-title">Cast</div>
-            <ul class="cast-list">
-              ${cast.slice(0,8).map(c => `
-                <li>${c.name}${c.character ? " as " + c.character : ""}</li>
-              `).join("")}
-            </ul>
-          `;
-        }
-        let providersHtml = "";
-        const groupBlocks = groups.map(g => {
-          const list = wp[g.key] || [];
-          if (!list.length) return "";
-          const names = list.map((p, idx) =>
-            `<span class="provider-name">${p.provider_name}${idx < list.length - 1 ? ", " : ""}</span>`
-          ).join("");
-          return `
-            <div class="provider-group">
-              <div class="provider-group-title">${g.label}</div>
-              <div>${names}</div>
-            </div>
-          `;
-        }).filter(Boolean).join("");
-        if (groupBlocks) {
-          providersHtml = `
-            <div class="detail-section-title">Where TMDB says it’s available</div>
-            <div class="providers-groups">${groupBlocks}</div>
-            <p class="small-text" style="margin-top:.4rem;">
-              Availability is region-dependent and can change. Use the watch buttons above to double-check.
-            </p>
-          `;
-        }
-        container.innerHTML = `
-          ${castHtml}
-          ${providersHtml}
-        `;
-      },
+      renderDetailMeta(details, container, titleObj) {
+  const cast = details.cast || [];
+  const wp = details.watch_providers || {};
+  const groups = [
+    { key: "flatrate", label: "Streaming" },
+    { key: "rent",     label: "Rent" },
+    { key: "buy",      label: "Buy" }
+  ];
+
+  const titleName =
+    (titleObj && (titleObj.name || titleObj.title)) ||
+    "this title";
+
+  let castHtml = "";
+  if (cast.length) {
+    castHtml = `
+      <div class="detail-section-title">Cast</div>
+      <ul class="cast-list">
+        ${cast.slice(0, 8).map(c => `
+          <li>${c.name}${c.character ? " as " + c.character : ""}</li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  // turn providers into clickable links
+  let providersHtml = "";
+  const groupBlocks = groups.map(g => {
+    const list = wp[g.key] || [];
+    if (!list.length) return "";
+
+    const names = list.map((p, idx) => {
+      const url =
+        p.url || Views.buildProviderUrl(p.provider_name, titleName);
+
+      const comma = idx < list.length - 1 ? ", " : "";
+      return `
+        <a
+          class="provider-name"
+          href="${url}"
+          target="_blank"
+          rel="noopener noreferrer"
+        >${p.provider_name}</a>${comma}
+      `;
+    }).join("");
+
+    return `
+      <div class="provider-group">
+        <div class="provider-group-title">${g.label}</div>
+        <div>${names}</div>
+      </div>
+    `;
+  }).filter(Boolean).join("");
+
+  if (groupBlocks) {
+    providersHtml = `
+      <div class="detail-section-title">Where TMDB says it’s available</div>
+      <div class="providers-groups">${groupBlocks}</div>
+      <p class="small-text" style="margin-top:.4rem;">
+        Availability is region-dependent and can change. Use the watch buttons above to double-check.
+      </p>
+    `;
+  }
+
+  container.innerHTML = `
+    ${castHtml}
+    ${providersHtml}
+  `;
+},
+      buildProviderUrl(providerName, title) {
+  const q = encodeURIComponent(`${title} ${providerName} watch`);
+  const name = providerName.toLowerCase();
+
+  if (name.includes("netflix")) {
+    return `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
+  }
+  if (name.includes("prime") || name.includes("amazon")) {
+    return `https://www.primevideo.com/search?phrase=${encodeURIComponent(title)}`;
+  }
+  if (name.includes("disney")) {
+    return `https://www.disneyplus.com/search/${encodeURIComponent(title)}`;
+  }
+  if (name.includes("apple")) {
+    return `https://tv.apple.com/search?term=${encodeURIComponent(title)}`;
+  }
+  if (name.includes("hulu")) {
+    return `https://www.hulu.com/search?q=${encodeURIComponent(title)}`;
+  }
+
+  // Fallback: Google search for "<title> <provider> watch"
+  return `https://www.google.com/search?q=${q}`;
+},
 
       watchlist() {
         const list = AppState.watchlist;
