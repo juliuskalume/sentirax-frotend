@@ -658,14 +658,31 @@
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-
+    
+.wiki-nav-btn,
 .wiki-close-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  font-size: 1.8rem;
-  float: right;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #2a2a33;
+  color: #d0d0d5;
+  border: 1px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
   cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+
+.wiki-nav-btn:hover,
+.wiki-close-btn:hover {
+  background: #3a3a44;
+}
+
+.wiki-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
   </style>
@@ -1831,22 +1848,29 @@
         }, 1500);
       },
 
-      openWikiFullscreen(title, html, url) {
-  const modal   = document.getElementById("wikiFullscreen");
-  const titleEl = document.getElementById("wikiFullscreenTitle");
-  const textEl  = document.getElementById("wikiFullscreenText");
-  const linkEl  = document.getElementById("wikiFullscreenLink");
+      openWikiFullscreen(title, html) {
+  // Reset wiki navigation history with the first opened page
+  Views._wikiHistory = [
+    {
+      title: title || "Wikipedia",
+      html: html || "<p class='small-text'>No content available.</p>"
+    }
+  ];
+  Views._wikiHistoryIndex = 0;
 
-  titleEl.textContent = title || "Wikipedia";
-  textEl.innerHTML    = html;
-  linkEl.innerHTML    = url
-    ? `<a href="${url}" target="_blank" class="small-text">Open on Wikipedia →</a>`
-    : "";
+  // Render the current history entry into the fullscreen modal
+  Views.renderWikiFullscreenCurrent();
 
-  // IMPORTANT: intercept all links inside the wiki text
-  Views.hijackWikipediaLinks(textEl);
+  // Show modal
+  const modal = document.getElementById("wikiFullscreen");
+  if (modal) modal.classList.remove("hidden");
 
-  modal.classList.remove("hidden");
+  // Attach navigation button handlers
+  const backBtn = document.getElementById("wikiNavBack");
+  const fwdBtn  = document.getElementById("wikiNavForward");
+
+  if (backBtn) backBtn.onclick = () => Views.wikiGoBack();
+  if (fwdBtn)  fwdBtn.onclick  = () => Views.wikiGoForward();
 },
 
 
@@ -1967,10 +1991,29 @@ closeWikiFullscreen() {
   <!-- Fullscreen Wikipedia modal -->
 <div id="wikiFullscreen" class="modal-overlay hidden">
   <div class="modal-content" style="max-width: 900px; width: 100%; max-height: 90vh; overflow: hidden; display:flex; flex-direction:column;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
-      <h3 id="wikiFullscreenTitle" style="margin:0;font-size:1.1rem;"></h3>
-      <button class="btn-ghost" onclick="Views.closeWikiFullscreen()">✕</button>
-    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+  <h3 id="wikiFullscreenTitle" style="margin:0;font-size:1.05rem;font-weight:500;"></h3>
+
+  <div style="display:flex;align-items:center;gap:.4rem;">
+    <button id="wikiNavBack"
+            class="wiki-nav-btn"
+            title="Back">
+      ‹
+    </button>
+
+    <button id="wikiNavForward"
+            class="wiki-nav-btn"
+            title="Forward">
+      ›
+    </button>
+
+    <button class="wiki-close-btn"
+            onclick="Views.closeWikiFullscreen()"
+            title="Close">
+      ✕
+    </button>
+  </div>
+</div>
     <div id="wikiFullscreenText" style="flex:1;overflow:auto;border:1px solid var(--border-subtle);border-radius:10px;padding:0.75rem;background:#020617;font-size:0.85rem;"></div>
     <div id="wikiFullscreenLink" style="margin-top:.5rem;"></div>
   </div>
