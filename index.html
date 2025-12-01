@@ -2006,11 +2006,6 @@ closeWikiFullscreen() {
         titleEl.textContent = data.wiki_title || pageTitle;
       }
 
-      if (linkEl) {
-        linkEl.innerHTML = data.url
-          ? `<a href="${data.url}" target="_blank" class="small-text">Open original on Wikipedia →</a>`
-          : "";
-      }
     } catch (err) {
       if (textEl) {
         textEl.innerHTML = `<p class="small-text">Error loading Wikipedia page: ${err.message || err}</p>`;
