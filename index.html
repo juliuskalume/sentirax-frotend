@@ -1,775 +1,1592 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>SentiraX</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SentiraX – AI Mood-Based Movie & Show Companion</title>
+  <meta name="description" content="SentiraX uses AI and TMDB to help you choose what to watch next based on your mood. Check in with how you feel and get tailored movie & show recommendations.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+
+  <link rel="canonical" href="https://sentirax.vercel.app/">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SentiraX">
+  <meta property="og:title" content="SentiraX – Your Mood-Based Watch Companion">
+  <meta property="og:description" content="Tell SentiraX how you feel and get movie & show recommendations that match your mood.">
+  <meta property="og:url" content="https://sentirax.vercel.app/">
+  <meta property="og:image" content="https://sentirax.vercel.app/og-image.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SentiraX – Your Mood-Based Watch Companion">
+  <meta name="twitter:description" content="AI-powered mood-based viewing. Check in with your mood and discover movies & shows that fit how you feel.">
+  <meta name="twitter:image" content="https://sentirax.vercel.app/og-image.png">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://sentirax.vercel.app/",
+    "name": "SentiraX",
+    "description": "SentiraX is an AI-powered mood-based movie & show companion that helps you choose what to watch next based on how you feel.",
+    "publisher": {
+      "@type": "Organization",
+      "name": "SentiraX",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://sentirax.vercel.app/icons/icon-192.png"
+      }
+    }
+  }
+  </script>
+
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="theme-color" content="#020617">
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+
   <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #020617;
-      color: #e5e7eb;
+    :root {
+      /* SentiraX dark + neon theme */
+      --accent: #22c55e;
+      --accent2: #22d3ee;
+      --bg: #020617;
+      --surface: #0b1220;
+      --surface-soft: #020617;
+      --border-subtle: #1f2937;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --highlight: #4ade80;
+      --danger: #f97316;
+    }
+    * {
       margin: 0;
       padding: 0;
-      display: flex;
-      justify-content: center;
-    }
-    .container {
-      max-width: 800px;
-      width: 100%;
-      padding: 24px 16px 64px;
-    }
-    h1, h2, h3, h4 {
-      color: #f9fafb;
-      margin-top: 0;
-    }
-    .brand {
-      font-weight: 700;
-      font-size: 1.8rem;
-      letter-spacing: 0.04em;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .brand-pill {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid #22c55e33;
-      background: #022c22;
-      color: #a7f3d0;
-    }
-    .tagline {
-      font-size: 0.85rem;
-      color: #9ca3af;
-      margin-bottom: 18px;
-    }
-    .card {
-      background: radial-gradient(circle at top left, #0f172a, #020617 55%);
-      border-radius: 16px;
-      padding: 16px 18px 20px;
-      margin-bottom: 20px;
-      border: 1px solid #1f2937;
-      box-shadow: 0 18px 45px rgba(0,0,0,0.5);
-    }
-    .field {
-      margin-bottom: 12px;
-    }
-    label {
-      display: block;
-      font-size: 0.85rem;
-      margin-bottom: 4px;
-      color: #9ca3af;
-    }
-    input[type="number"],
-    select,
-    textarea {
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #4b5563;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 0.9rem;
       box-sizing: border-box;
     }
-    input[type="number"]:focus,
-    select:focus,
-    textarea:focus {
-      outline: none;
-      border-color: #22c55e;
-      box-shadow: 0 0 0 1px #22c55e40;
+    body {
+      font-family: 'Crimson Pro', serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
     }
-    textarea {
-      min-height: 70px;
-      resize: vertical;
-    }
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .chip {
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid #4b5563;
-      font-size: 0.8rem;
-      cursor: pointer;
-      user-select: none;
-      background: #020617;
-      transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
-    }
-    .chip:hover {
-      border-color: #6b7280;
-      transform: translateY(-1px);
-    }
-    .chip.selected {
-      background: linear-gradient(135deg, #22c55e, #22d3ee);
-      border-color: #4ade80;
-      color: #022c22;
-    }
-    button {
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, #22c55e, #22d3ee);
-      color: #022c22;
+    h1, h2, h3, h4 {
+      font-family: 'Playfair Display', serif;
       font-weight: 600;
-      font-size: 0.85rem;
+    }
+    a { color: inherit; }
+
+    .app-container {
+      max-width: 100%;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    @media (min-width: 640px) {
+      .app-container {
+        max-width: 600px;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+      }
+    }
+    @media (min-width: 900px) {
+      .app-container {
+        max-width: 900px;
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+    }
+    @media (min-width: 1280px) {
+      .app-container {
+        max-width: 1200px;
+        padding-left: 3rem;
+        padding-right: 3rem;
+      }
+    }
+
+    .bg-pattern {
+      position: fixed;
+      inset: 0;
+      opacity: 0.25;
+      background:
+        radial-gradient(circle at top, rgba(34,197,94,0.12), transparent 55%),
+        radial-gradient(circle at 70% 20%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(circle at bottom, rgba(15,23,42,0.9), #020617 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-header {
+      background: radial-gradient(circle at top left, #0f172a, #020617 60%);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 1rem 1.5rem;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.7);
+    }
+    @media (min-width: 640px) {
+      .app-header { padding: 1.25rem 1.5rem; }
+    }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #f9fafb;
+    }
+    @media (min-width: 640px) {
+      .logo { font-size: 1.75rem; }
+    }
+    .logo-pill {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(34,197,94,0.35);
+      background: rgba(17,24,39,0.9);
+      color: #bbf7d0;
+      text-transform: uppercase;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 999px;
+      font-family: 'Crimson Pro', serif;
+      font-size: 0.95rem;
+      font-weight: 600;
       cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 10px 25px rgba(34, 197, 94, 0.25);
+      justify-content: center;
+      gap: 0.4rem;
+      width: 100%;
     }
-    button.main {
-      margin-top: 6px;
-      font-size: 0.9rem;
-      padding: 10px 16px;
+    @media (min-width: 640px) {
+      .btn { width: auto; }
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-      box-shadow: none;
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #022c22;
+      box-shadow: 0 14px 40px rgba(34,197,94,0.35);
     }
-    button:hover:not(:disabled) {
+    .btn-primary:hover {
       transform: translateY(-1px);
+      box-shadow: 0 18px 50px rgba(34,197,94,0.45);
+    }
+    .btn-secondary {
+      background: #020617;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      box-shadow: 0 8px 30px rgba(15,23,42,0.9);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid transparent;
+      font-size: 0.85rem;
+    }
+    .btn-ghost:hover {
+      border-color: var(--border-subtle);
+      color: var(--accent);
+    }
+
+    .form-group { margin-bottom: 1.5rem; }
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 0.7rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: #020617;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(34,197,94,0.5);
+      background: #020617;
+    }
+    .form-textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .mood-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(to right, #f97316, #eab308, #22c55e);
+      outline: none;
+      opacity: 0.9;
+      transition: opacity 0.15s ease;
+    }
+    .mood-slider:hover { opacity: 1; }
+    .mood-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .mood-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #f9fafb;
+      border: 2px solid var(--accent);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+
+    .mood-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .mood-tag {
+      padding: 0.45rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: #020617;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .mood-tag:hover {
+      border-color: var(--accent);
+      color: var(--text-main);
+    }
+    .mood-tag.selected {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-color: transparent;
+      color: #022c22;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #020617, #020617 60%);
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      padding: 1.2rem 1.35rem 1.4rem;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.75);
+      margin-bottom: 1.5rem;
+    }
+
+    .title-card {
+      background: #020617;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      padding: 0.9rem 1rem 1rem;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.7);
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    }
+    .title-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 45px rgba(0,0,0,0.9);
+      border-color: rgba(34,197,94,0.5);
+    }
+
+    .title-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .title-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .title-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f9fafb;
+    }
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+    .badge {
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      padding: 0.15rem 0.5rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+    .badge-18 {
+      background: rgba(127,29,29,0.9);
+      border-color: #b91c1c;
+      color: #fee2e2;
+    }
+    .badge-type {
+      border-color: rgba(34,197,94,0.5);
+      color: #bbf7d0;
+    }
+    .reason-text,
+    .summary-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    .stream-row {
+      margin-top: 0.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
     }
     .stream-btn {
       display: inline-flex;
-      padding: 6px 10px;
+      align-items: center;
+      justify-content: center;
+      padding: 0.3rem 0.7rem;
       border-radius: 999px;
-      border: 1px solid #1f2937;
+      border: 1px solid var(--border-subtle);
+      background: #020617;
       font-size: 0.75rem;
       text-decoration: none;
-      background: #020617;
-      color: #e5e7eb;
-      margin-right: 4px;
-      margin-top: 4px;
+      color: var(--text-muted);
+      transition: all 0.12s ease;
     }
     .stream-btn:hover {
-      border-color: #4ade80;
+      border-color: var(--accent);
+      color: var(--text-main);
     }
-    .small {
-      font-size: 0.8rem;
-      color: #9ca3af;
-    }
-    .toggle-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .checkbox {
-      transform: scale(1.05);
-    }
-    .recommendation {
-      border-top: 1px solid #1f2937;
-      padding-top: 10px;
-      margin-top: 10px;
-    }
-    .rec-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .badge {
-      display: inline-flex;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      background: #111827;
-      border: 1px solid #374151;
-      margin-right: 4px;
-      margin-bottom: 3px;
-    }
-    .badge-18 {
-      background: #450a0a;
-      border-color: #b91c1c;
-      color: #fecaca;
-    }
-    .error {
-      color: #fecaca;
-      font-size: 0.8rem;
-      margin-top: 4px;
-    }
-    .hidden {
-      display: none;
-    }
+
     .section-label {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6b7280;
-      margin-bottom: 6px;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
     }
-    .detail-section-title {
-      font-size: 0.8rem;
+
+    .loading {
+      text-align: center;
+      padding: 2.5rem 1rem;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 3px solid #0b1220;
+      border-top: 3px solid var(--accent);
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 0.75rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .nav-bar {
+      position: sticky;
+      bottom: 0;
+      background: #020617;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-around;
+      padding: 0.4rem;
+      box-shadow: 0 -12px 40px rgba(0,0,0,0.9);
+      z-index: 5;
+    }
+    @media (min-width: 900px) {
+      .nav-bar {
+        border-top: none;
+        box-shadow: none;
+        justify-content: flex-end;
+        gap: 0.6rem;
+      }
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      padding: 0.4rem 0.6rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      opacity: 0.7;
+      font-size: 0.7rem;
+      flex: 1;
+      transition: color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+    }
+    @media (min-width: 900px) {
+      .nav-item {
+        flex: 0 0 auto;
+        flex-direction: row;
+        gap: 0.35rem;
+        font-size: 0.78rem;
+      }
+    }
+    .nav-item span:first-child { font-size: 1.2rem; }
+    .nav-item.active,
+    .nav-item:hover {
+      color: var(--accent);
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    .site-footer {
+      padding: 1.5rem 1rem 2.5rem;
+      border-top: 1px solid rgba(15,23,42,0.7);
+      font-size: 0.85rem;
+      background: transparent;
+    }
+    .footer-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+    @media (min-width: 640px) {
+      .footer-inner {
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 2rem;
+      }
+    }
+    .footer-logo {
+      font-weight: 700;
+      text-decoration: none;
+      color: #f9fafb;
+    }
+    .footer-tagline {
+      margin-top: 0.2rem;
+      color: var(--text-muted);
+      max-width: 240px;
+    }
+    .footer-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.4rem;
+    }
+    .footer-column h3 {
+      margin-bottom: 0.45rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #9ca3af;
-      margin-top: 8px;
-      margin-bottom: 4px;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+    }
+    .footer-column ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .footer-column li { margin-bottom: 0.25rem; }
+    .footer-column a {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .footer-column a:hover { color: var(--accent); }
+    .footer-bottom {
+      margin-top: 1.2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.9);
+      backdrop-filter: blur(6px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      padding: 1rem;
+      animation: fadeInUp 0.2s ease;
+    }
+    .modal-content {
+      background: #020617;
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      padding: 1.4rem 1.6rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+    }
+
+    .center-block {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .responsive-padding {
+      padding: 1.4rem 0 2.2rem;
+      min-height: calc(100vh - 210px);
+    }
+    .responsive-heading {
+      font-size: 1.6rem;
+    }
+    @media (min-width: 640px) {
+      .responsive-heading { font-size: 2rem; }
+    }
+
+    .detail-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      margin-bottom: 0.25rem;
     }
     ul.cast-list {
       list-style: none;
-      padding-left: 0;
-      margin: 0;
+      padding: 0;
+      margin: 0.25rem 0 0;
     }
     ul.cast-list li {
       font-size: 0.8rem;
-      color: #d1d5db;
-      margin-bottom: 2px;
+      color: var(--text-main);
+      margin-bottom: 0.1rem;
     }
+
     .providers-groups {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 4px;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
     }
     .provider-group {
-      border-radius: 8px;
-      border: 1px solid #1f2937;
-      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      padding: 0.5rem 0.7rem;
       background: #020617;
     }
     .provider-group-title {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #9ca3af;
-      margin-bottom: 2px;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.1rem;
     }
     .provider-name {
       font-size: 0.8rem;
-      color: #e5e7eb;
+      color: var(--text-main);
     }
-    .stream-row {
-      margin-top: 6px;
-    }
-    @media (max-width: 600px) {
-      .container {
-        padding-inline: 12px;
-      }
-    }
+
+    .small-text { font-size: 0.82rem; color: var(--text-muted); }
+    .error-text { font-size: 0.8rem; color: #fecaca; margin-top: 0.4rem; }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div style="margin-bottom: 12px;">
-      <div class="brand">
-        SentiraX
-        <span class="brand-pill">mood-aware picks</span>
-      </div>
-      <p class="tagline">
-        Tell SentiraX your current vibe and it’ll hunt down movies and shows that match how you feel — including 18+ titles if you’re of age and opt in.
-      </p>
-    </div>
-
-    <!-- Onboarding card -->
-    <div id="onboarding-card" class="card">
-      <div class="section-label">Step 1</div>
-      <h2>Help SentiraX understand you</h2>
-
-      <div class="field">
-        <label for="age">Age <span style="color:#f97316;">*</span></label>
-        <input type="number" id="age" min="13" max="120" placeholder="21" />
-        <div id="age-error" class="error hidden">Please enter a valid age (13+).</div>
-      </div>
-
-      <div class="field">
-        <label for="gender">Gender (optional)</label>
-        <select id="gender">
-          <option value="">Prefer not to say</option>
-          <option value="female">Female</option>
-          <option value="male">Male</option>
-          <option value="non-binary">Non-binary</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Genres you enjoy (optional)</label>
-        <div id="liked-genres" class="chips"></div>
-      </div>
-
-      <div class="field">
-        <label>Genres to avoid (optional)</label>
-        <div id="disliked-genres" class="chips"></div>
-      </div>
-
-      <div class="field">
-        <label>Your usual goals (optional)</label>
-        <div id="goals" class="chips"></div>
-      </div>
-
-      <div class="field">
-        <div class="toggle-row">
-          <input class="checkbox" type="checkbox" id="allow-adult" />
-          <label for="allow-adult" style="margin: 0;">Allow 18+ content (adult films)</label>
+  <div class="bg-pattern"></div>
+  <div class="app-container">
+    <div class="content">
+      <header class="app-header" id="appHeader">
+        <div class="logo">
+          <span>🎬</span>
+          <span>SentiraX</span>
+          <span class="logo-pill">mood-aware picks</span>
         </div>
-        <p class="small">Only available if you’re 18+. You can change this later.</p>
-      </div>
-
-      <button class="main" id="save-profile-btn">Continue to mood check-in →</button>
-      <div id="profile-status" class="small"></div>
-    </div>
-
-    <!-- Check-in card -->
-    <div id="checkin-card" class="card hidden">
-      <div class="section-label">Step 2</div>
-      <h2>What’s your vibe right now?</h2>
-
-      <div class="field">
-        <label>Mood (optional)</label>
-        <div id="mood-chips" class="chips"></div>
-      </div>
-
-      <div class="field">
-        <label for="free-text">What’s on your mind / what do you feel like watching?</label>
-        <textarea id="free-text" placeholder="e.g. I want something cozy and romantic, not too serious..."></textarea>
-        <p class="small">
-          You can be specific: “dark psychological thriller”, “short anime, chill vibe”, “background show while I study”, etc.
+        <p style="font-size: 0.9rem; margin-top: 0.2rem; color: var(--text-muted);">
+          Tell SentiraX your vibe and it’ll line up movies & shows that match it — including 18+ titles if you’re of age and opt in.
         </p>
-      </div>
+      </header>
 
-      <div class="field">
-        <label>Type (optional)</label>
-        <select id="type-filter">
-          <option value="any">Movies or Shows</option>
-          <option value="movie">Movies only</option>
-          <option value="show">Shows only</option>
-        </select>
-      </div>
+      <main id="mainContent" class="responsive-padding">
+        <!-- JS injects views -->
+      </main>
 
-      <div class="field">
-        <label for="max-duration">Max duration in minutes (optional)</label>
-        <input type="number" id="max-duration" min="10" max="300" placeholder="120" />
-      </div>
-
-      <button class="main" id="get-recs-btn">Get SentiraX picks</button>
-      <div id="loading" class="small hidden">Thinking about your mood and options...</div>
-      <div id="checkin-error" class="error hidden"></div>
-
-      <div id="recommendations-card" class="card hidden" style="margin-top:16px;">
-        <h3>Your SentiraX suggestions</h3>
-        <p id="summary" class="small"></p>
-        <div id="recommendations-list"></div>
-      </div>
-
-      <div id="details-card" class="card hidden" style="margin-top:16px;">
-        <h3 id="details-title">Details</h3>
-        <p id="details-overview" class="small"></p>
-        <p id="details-meta" class="small"></p>
-
-        <div id="details-cast-section" class="hidden">
-          <div class="detail-section-title">Cast</div>
-          <ul id="details-cast" class="cast-list"></ul>
+      <footer class="site-footer">
+        <div class="footer-inner">
+          <div class="footer-brand">
+            <a href="/" class="footer-logo">SentiraX</a>
+            <p class="footer-tagline">
+              Your mood-based movie & show companion.
+            </p>
+          </div>
+          <nav class="footer-nav">
+            <div class="footer-column">
+              <h3>Product</h3>
+              <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="#">How it works</a></li>
+              </ul>
+            </div>
+            <div class="footer-column">
+              <h3>Guides</h3>
+              <ul>
+                <li><a href="#">Mood-based watching</a></li>
+                <li><a href="#">Using AI for discovery</a></li>
+              </ul>
+            </div>
+            <div class="footer-column">
+              <h3>Legal</h3>
+              <ul>
+                <li><a href="#">Privacy</a></li>
+                <li><a href="#">Terms</a></li>
+              </ul>
+            </div>
+          </nav>
         </div>
-
-        <div id="details-watch-section" class="hidden">
-          <div class="detail-section-title">Where to watch</div>
-          <div id="details-watch" class="providers-groups"></div>
-          <p class="small" style="margin-top:4px;">Availability and region data via TMDB; may vary by location.</p>
+        <div class="footer-bottom">
+          <p>© <span id="year"></span> SentiraX. All rights reserved.</p>
         </div>
-      </div>
+      </footer>
+
+      <nav class="nav-bar" id="navBar" style="display:none;">
+        <div class="nav-item" data-view="check-in">
+          <span>🌙</span>
+          <span>Check-in</span>
+        </div>
+        <div class="nav-item" data-view="recommendations">
+          <span>✨</span>
+          <span>Discover</span>
+        </div>
+        <div class="nav-item" data-view="watchlist">
+          <span>📺</span>
+          <span>Watchlist</span>
+        </div>
+        <div class="nav-item" data-view="settings">
+          <span>⚙️</span>
+          <span>Settings</span>
+        </div>
+      </nav>
     </div>
   </div>
 
   <script>
-    const RENDER_BACKEND_URL = "https://sentirax-backend.onrender.com";
+    // Footer year
+    document.addEventListener("DOMContentLoaded", () => {
+      const yearEl = document.getElementById("year");
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
 
-    function getApiBase() {
-      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
-        return "http://localhost:3000";
+    // Backend URL for SentiraX
+    const BACKEND_BASE_URL = "https://sentirax-backend.onrender.com";
+
+    // Simple storage wrapper
+    const Storage = {
+      get(key, fallback = null) {
+        try {
+          const raw = localStorage.getItem("sentirax_" + key);
+          if (!raw) return fallback;
+          return JSON.parse(raw);
+        } catch {
+          return fallback;
+        }
+      },
+      set(key, value) {
+        try {
+          localStorage.setItem("sentirax_" + key, JSON.stringify(value));
+        } catch {}
+      },
+      remove(key) {
+        try { localStorage.removeItem("sentirax_" + key); } catch {}
+      },
+      clearAll() {
+        ["user_profile", "watchlist", "checkins"].forEach(k => Storage.remove(k));
       }
-      return RENDER_BACKEND_URL;
-    }
+    };
 
-    const GENRES = [
-      "Action", "Comedy", "Drama", "Romance", "Horror",
-      "Thriller", "Sci-Fi", "Fantasy", "Anime", "Documentary",
-      "Crime", "Mystery", "Adventure"
-    ];
+    const AppState = {
+      user: null,
+      watchlist: [],
+      checkins: [],
+      currentView: "welcome",
+      lastCheckIn: null,
+      recommendations: [],
+      selectedTitle: null,
+      detailsCache: {},
 
-    const GOALS = [
-      "Escape and relax",
-      "Laugh",
-      "Get inspired",
-      "Learn something",
-      "Background noise",
-      "Watch with friends",
-      "Date night"
-    ];
+      init() {
+        this.user = Storage.get("user_profile", null);
+        this.watchlist = Storage.get("watchlist", []);
+        this.checkins = Storage.get("checkins", []);
+        if (this.user) this.currentView = "check-in";
+      },
 
-    const MOODS = [
-      "Happy", "Sad", "Stressed", "Tired", "Bored",
-      "Angry", "Romantic", "Curious", "Motivated", "Neutral"
-    ];
+      saveUser(profile) {
+        this.user = profile;
+        Storage.set("user_profile", profile);
+      },
 
-    function createChipGroup(containerId, values, multi = true) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-      values.forEach(value => {
-        const div = document.createElement("div");
-        div.className = "chip";
-        div.textContent = value;
-        div.dataset.value = value;
-        div.addEventListener("click", () => {
-          if (!multi) {
-            container.querySelectorAll(".chip").forEach(ch => ch.classList.remove("selected"));
-            div.classList.add("selected");
+      saveCheckIn(checkIn) {
+        this.lastCheckIn = checkIn;
+        this.checkins.push({ ...checkIn, ts: new Date().toISOString() });
+        Storage.set("checkins", this.checkins);
+      },
+
+      addToWatchlist(item) {
+        if (!this.watchlist.find(x => x.id === item.id)) {
+          this.watchlist.push(item);
+          Storage.set("watchlist", this.watchlist);
+        }
+      },
+
+      removeFromWatchlist(id) {
+        this.watchlist = this.watchlist.filter(x => x.id !== id);
+        Storage.set("watchlist", this.watchlist);
+      },
+
+      reset() {
+        this.user = null;
+        this.watchlist = [];
+        this.checkins = [];
+        this.currentView = "welcome";
+        this.recommendations = [];
+        this.selectedTitle = null;
+        this.detailsCache = {};
+        Storage.clearAll();
+      }
+    };
+
+    const Router = {
+      navigate(view, data = {}) {
+        AppState.currentView = view;
+        const navBar = document.getElementById("navBar");
+        if (["welcome", "onboarding"].includes(view)) {
+          navBar.style.display = "none";
+        } else {
+          navBar.style.display = "flex";
+        }
+
+        document.querySelectorAll(".nav-item").forEach(item => {
+          item.classList.toggle("active", item.dataset.view === view);
+        });
+
+        this.render(view, data);
+      },
+
+      render(view, data) {
+        const main = document.getElementById("mainContent");
+        switch (view) {
+          case "welcome":
+            main.innerHTML = Views.welcome();
+            break;
+          case "onboarding":
+            main.innerHTML = Views.onboarding();
+            Views.initOnboarding();
+            break;
+          case "check-in":
+            main.innerHTML = Views.checkIn();
+            Views.initCheckIn();
+            break;
+          case "recommendations":
+            main.innerHTML = Views.recommendations();
+            Views.initRecommendations();
+            break;
+          case "detail":
+            main.innerHTML = Views.detail(data.title);
+            Views.initDetail(data.title);
+            break;
+          case "watchlist":
+            main.innerHTML = Views.watchlist();
+            Views.initWatchlist();
+            break;
+          case "settings":
+            main.innerHTML = Views.settings();
+            break;
+          default:
+            main.innerHTML = "<p>View not found</p>";
+        }
+        window.scrollTo(0, 0);
+      }
+    };
+
+    const Views = {
+      welcome() {
+        return `
+          <div class="center-block" style="padding:2.2rem 0;">
+            <div style="font-size:3.4rem; margin-bottom:1rem; text-align:center; animation:fadeInUp .5s ease;">
+              🍿
+            </div>
+            <h1 class="responsive-heading" style="text-align:center; margin-bottom:0.8rem; animation:fadeInUp .5s ease .05s; animation-fill-mode:both;">
+              Welcome to SentiraX
+            </h1>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom:1.7rem; animation:fadeInUp .5s ease .1s; animation-fill-mode:both;">
+              Mood-aware movie and show picks, tuned to what you feel like right now — not just what’s trending.
+            </p>
+            <div class="card" style="margin-bottom:1.8rem; animation:fadeInUp .5s ease .15s; animation-fill-mode:both;">
+              <div class="section-label">Note</div>
+              <p class="small-text">
+                SentiraX suggests entertainment based on your mood and preferences. It’s not a mental health tool and does not replace professional help. 
+                If you’re in crisis or struggling heavily, please reach out to a qualified professional or local emergency service.
+              </p>
+            </div>
+            <div style="text-align:center; animation:fadeInUp .5s ease .2s; animation-fill-mode:both;">
+              <button class="btn btn-primary" onclick="Router.navigate('onboarding')">
+                Get Started
+              </button>
+            </div>
+          </div>
+        `;
+      },
+
+      onboarding() {
+        return `
+          <div class="center-block">
+            <h2 class="responsive-heading" style="margin-bottom:1.2rem;">Let’s set your baseline</h2>
+            <p class="small-text" style="margin-bottom:1.5rem;">
+              Age is required so we can safely handle 18+ content. Everything else just helps SentiraX learn your taste.
+            </p>
+            <div class="card">
+              <div class="form-group">
+                <label class="form-label">Age <span style="color:var(--danger);">*</span></label>
+                <input type="number" id="ageInput" min="13" max="120" class="form-input" placeholder="21">
+                <div id="ageError" class="error-text hidden">Please enter a valid age (13+).</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Gender (optional)</label>
+                <select id="genderInput" class="form-select">
+                  <option value="">Prefer not to say</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="non-binary">Non-binary</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Genres you enjoy (optional)</label>
+                <div id="likedGenres" class="mood-tags"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Genres to avoid (optional)</label>
+                <div id="dislikedGenres" class="mood-tags"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Your usual goals (optional)</label>
+                <div id="goals" class="mood-tags"></div>
+              </div>
+              <div class="form-group" style="display:flex;align-items:center;gap:.5rem;">
+                <input type="checkbox" id="allowAdult" style="accent-color:#22c55e; width:18px; height:18px;">
+                <label for="allowAdult" class="form-label" style="margin-bottom:0;">Allow 18+ content (adult films)</label>
+              </div>
+              <p class="small-text">
+                18+ content is only considered if your age is 18+ and this toggle is on.
+              </p>
+              <div style="margin-top:1.3rem; display:flex; gap:.6rem; flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="Views.saveOnboarding()">Save & continue</button>
+              </div>
+            </div>
+          </div>
+        `;
+      },
+
+      initOnboarding() {
+        const likedGenres = [
+          "Action","Comedy","Drama","Romance","Horror",
+          "Thriller","Sci-Fi","Fantasy","Anime","Documentary",
+          "Crime","Mystery","Adventure"
+        ];
+        const goals = [
+          "Escape and relax","Laugh","Get inspired","Learn something",
+          "Background noise","Watch with friends","Date night"
+        ];
+        function renderChips(containerId, values) {
+          const el = document.getElementById(containerId);
+          el.innerHTML = "";
+          values.forEach(v => {
+            const div = document.createElement("div");
+            div.className = "mood-tag";
+            div.dataset.value = v;
+            div.textContent = v;
+            div.onclick = () => div.classList.toggle("selected");
+            el.appendChild(div);
+          });
+        }
+        renderChips("likedGenres", likedGenres);
+        renderChips("dislikedGenres", likedGenres);
+        renderChips("goals", goals);
+
+        const stored = AppState.user;
+        if (stored) {
+          document.getElementById("ageInput").value = stored.age || "";
+          document.getElementById("genderInput").value = stored.gender || "";
+          if (stored.liked_genres) {
+            stored.liked_genres.forEach(g => {
+              const chip = document.querySelector(`#likedGenres .mood-tag[data-value="${g}"]`);
+              if (chip) chip.classList.add("selected");
+            });
+          }
+          if (stored.disliked_genres) {
+            stored.disliked_genres.forEach(g => {
+              const chip = document.querySelector(`#dislikedGenres .mood-tag[data-value="${g}"]`);
+              if (chip) chip.classList.add("selected");
+            });
+          }
+          if (stored.goals) {
+            stored.goals.forEach(g => {
+              const chip = document.querySelector(`#goals .mood-tag[data-value="${g}"]`);
+              if (chip) chip.classList.add("selected");
+            });
+          }
+          if (stored.allow_adult) {
+            document.getElementById("allowAdult").checked = true;
+          }
+        }
+
+        document.getElementById("ageInput").addEventListener("input", () => {
+          const v = Number(document.getElementById("ageInput").value || 0);
+          const allow = document.getElementById("allowAdult");
+          if (v < 18) {
+            allow.checked = false;
+            allow.disabled = true;
           } else {
-            div.classList.toggle("selected");
+            allow.disabled = false;
           }
         });
-        container.appendChild(div);
-      });
-    }
+      },
 
-    function getSelectedValues(containerId) {
-      return Array.from(document.querySelectorAll(`#${containerId} .chip.selected`))
-        .map(ch => ch.dataset.value);
-    }
+      saveOnboarding() {
+        const ageEl = document.getElementById("ageInput");
+        const age = Number(ageEl.value || 0);
+        const err = document.getElementById("ageError");
+        if (!age || age < 13 || age > 120) {
+          err.classList.remove("hidden");
+          return;
+        }
+        err.classList.add("hidden");
+        function getSelected(containerId) {
+          return Array.from(document.querySelectorAll(`#${containerId} .mood-tag.selected`)).map(x => x.dataset.value);
+        }
+        const gender = document.getElementById("genderInput").value || null;
+        const profile = {
+          age,
+          gender,
+          liked_genres: getSelected("likedGenres"),
+          disliked_genres: getSelected("dislikedGenres"),
+          goals: getSelected("goals"),
+          allow_adult: age >= 18 && document.getElementById("allowAdult").checked
+        };
+        AppState.saveUser(profile);
+        Router.navigate("check-in");
+      },
 
-    function saveProfileToStorage(profile) {
-      localStorage.setItem("sentirax_profile", JSON.stringify(profile));
-    }
+      checkIn() {
+        return `
+          <div class="center-block">
+            <h2 class="responsive-heading" style="margin-bottom:1rem;">How are you feeling today?</h2>
+            <p class="small-text" style="margin-bottom:1.8rem;">
+              Use mood + free text to tell SentiraX what kind of vibe you want tonight.
+            </p>
+            <div class="card">
+              <div class="form-group">
+                <label class="form-label">Mood intensity</label>
+                <input type="range" id="moodSlider" class="mood-slider" min="1" max="10" value="5">
+                <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.78rem;color:var(--text-muted);">
+                  <span>Low energy</span>
+                  <span id="moodLabel">Neutral (5)</span>
+                  <span>High energy</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Mood tags (optional)</label>
+                <div id="moodTags" class="mood-tags"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">What are you in the mood for? (optional)</label>
+                <textarea id="freeText" class="form-textarea" placeholder="e.g. cozy romcom, no heavy drama, can be a series"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Type</label>
+                <select id="typeFilter" class="form-select">
+                  <option value="any">Movies or shows</option>
+                  <option value="movie">Movies only</option>
+                  <option value="show">Shows only</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Max duration (minutes, optional)</label>
+                <input type="number" id="maxDuration" class="form-input" min="10" max="300" placeholder="120">
+              </div>
+              <button class="btn btn-primary" onclick="Views.submitCheckIn()">
+                Get SentiraX picks
+              </button>
+              <div id="checkinError" class="error-text hidden"></div>
+            </div>
+          </div>
+        `;
+      },
 
-    function loadProfileFromStorage() {
-      const str = localStorage.getItem("sentirax_profile");
-      if (!str) return null;
-      try { return JSON.parse(str); } catch { return null; }
-    }
-
-    function showCheckinCard() {
-      document.getElementById("onboarding-card").classList.add("hidden");
-      document.getElementById("checkin-card").classList.remove("hidden");
-    }
-
-    function showOnboardingCard() {
-      document.getElementById("onboarding-card").classList.remove("hidden");
-      document.getElementById("checkin-card").classList.add("hidden");
-    }
-
-    createChipGroup("liked-genres", GENRES);
-    createChipGroup("disliked-genres", GENRES);
-    createChipGroup("goals", GOALS);
-    createChipGroup("mood-chips", MOODS);
-
-    const ageInput = document.getElementById("age");
-    const genderSelect = document.getElementById("gender");
-    const allowAdultCheckbox = document.getElementById("allow-adult");
-    const profileStatus = document.getElementById("profile-status");
-    const ageError = document.getElementById("age-error");
-
-    const existingProfile = loadProfileFromStorage();
-    if (existingProfile) {
-      ageInput.value = existingProfile.age;
-      genderSelect.value = existingProfile.gender || "";
-      existingProfile.liked_genres?.forEach(g => {
-        const chip = document.querySelector(`#liked-genres .chip[data-value="${g}"]`);
-        if (chip) chip.classList.add("selected");
-      });
-      existingProfile.disliked_genres?.forEach(g => {
-        const chip = document.querySelector(`#disliked-genres .chip[data-value="${g}"]`);
-        if (chip) chip.classList.add("selected");
-      });
-      existingProfile.goals?.forEach(g => {
-        const chip = document.querySelector(`#goals .chip[data-value="${g}"]`);
-        if (chip) chip.classList.add("selected");
-      });
-      if (existingProfile.allow_adult) allowAdultCheckbox.checked = true;
-      showCheckinCard();
-    } else {
-      showOnboardingCard();
-    }
-
-    ageInput.addEventListener("input", () => {
-      const age = Number(ageInput.value || 0);
-      if (age < 18) {
-        allowAdultCheckbox.checked = false;
-        allowAdultCheckbox.disabled = true;
-      } else {
-        allowAdultCheckbox.disabled = false;
-      }
-    });
-
-    document.getElementById("save-profile-btn").addEventListener("click", () => {
-      const age = Number(ageInput.value || 0);
-      if (!age || age < 13 || age > 120) {
-        ageError.classList.remove("hidden");
-        return;
-      } else {
-        ageError.classList.add("hidden");
-      }
-
-      const profile = {
-        age,
-        gender: genderSelect.value || null,
-        liked_genres: getSelectedValues("liked-genres"),
-        disliked_genres: getSelectedValues("disliked-genres"),
-        goals: getSelectedValues("goals"),
-        allow_adult: age >= 18 && allowAdultCheckbox.checked
-      };
-
-      saveProfileToStorage(profile);
-      profileStatus.textContent = "Profile saved. SentiraX will use this as your base taste.";
-      showCheckinCard();
-    });
-
-    async function fetchTitleDetails(id) {
-      const detailsCard = document.getElementById("details-card");
-      const titleEl = document.getElementById("details-title");
-      const overviewEl = document.getElementById("details-overview");
-      const metaEl = document.getElementById("details-meta");
-      const castSection = document.getElementById("details-cast-section");
-      const castList = document.getElementById("details-cast");
-      const watchSection = document.getElementById("details-watch-section");
-      const watchContainer = document.getElementById("details-watch");
-
-      detailsCard.classList.remove("hidden");
-      titleEl.textContent = "Loading details...";
-      overviewEl.textContent = "";
-      metaEl.textContent = "";
-      castSection.classList.add("hidden");
-      watchSection.classList.add("hidden");
-      castList.innerHTML = "";
-      watchContainer.innerHTML = "";
-
-      try {
-        const res = await fetch(`${getApiBase()}/api/title-details`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id })
+      initCheckIn() {
+        const slider = document.getElementById("moodSlider");
+        const label = document.getElementById("moodLabel");
+        const labels = {
+          1:"Very low (1)",2:"Low (2)",3:"Drained (3)",4:"Below neutral (4)",
+          5:"Neutral (5)",6:"Above neutral (6)",7:"Engaged (7)",8:"Hyped (8)",
+          9:"Very hyped (9)",10:"Maxed out (10)"
+        };
+        slider.addEventListener("input", e => {
+          label.textContent = labels[e.target.value] || `Mood ${e.target.value}`;
         });
 
-        if (!res.ok) throw new Error("Failed to fetch details");
-
-        const data = await res.json();
-
-        titleEl.textContent = data.name || "Details";
-        overviewEl.textContent = data.overview || "No summary available.";
-
-        const metaBits = [];
-        if (data.type) metaBits.push(data.type === "movie" ? "Movie" : "Series");
-        if (data.release_date) metaBits.push(`Released: ${data.release_date}`);
-        if (data.runtime_minutes) metaBits.push(`${data.runtime_minutes} min`);
-        if (data.genres && data.genres.length) metaBits.push(`Genres: ${data.genres.join(", ")}`);
-        if (data.vote_average) metaBits.push(`Rating: ${data.vote_average.toFixed(1)}/10`);
-
-        metaEl.textContent = metaBits.join(" • ");
-
-        if (data.cast && data.cast.length) {
-          castList.innerHTML = "";
-          data.cast.forEach(c => {
-            const li = document.createElement("li");
-            li.textContent = c.character
-              ? `${c.name} as ${c.character}`
-              : c.name;
-            castList.appendChild(li);
-          });
-          castSection.classList.remove("hidden");
-        }
-
-        const wp = data.watch_providers || {};
-        const groups = [
-          { key: "flatrate", label: "Streaming" },
-          { key: "rent", label: "Rent" },
-          { key: "buy", label: "Buy" }
+        const moods = [
+          "Chill","Sad","Happy","Stressed","Tired",
+          "Romantic","Bored","Curious","Nostalgic","Anxious",
+          "Energetic","Cozy","Adventurous","Dark","Silly"
         ];
-
-        let hasProviders = false;
-        groups.forEach(g => {
-          const list = wp[g.key] || [];
-          if (!list.length) return;
-          hasProviders = true;
-          const groupDiv = document.createElement("div");
-          groupDiv.className = "provider-group";
-
-          const title = document.createElement("div");
-          title.className = "provider-group-title";
-          title.textContent = g.label;
-          groupDiv.appendChild(title);
-
-          const names = document.createElement("div");
-          list.forEach((p, idx) => {
-            const span = document.createElement("span");
-            span.className = "provider-name";
-            span.textContent = p.provider_name + (idx < list.length - 1 ? ", " : "");
-            names.appendChild(span);
-          });
-          groupDiv.appendChild(names);
-
-          watchContainer.appendChild(groupDiv);
+        const moodContainer = document.getElementById("moodTags");
+        moods.forEach(m => {
+          const div = document.createElement("div");
+          div.className = "mood-tag";
+          div.dataset.value = m;
+          div.textContent = m;
+          div.onclick = () => div.classList.toggle("selected");
+          moodContainer.appendChild(div);
         });
+      },
 
-        if (hasProviders) {
-          watchSection.classList.remove("hidden");
+      submitCheckIn() {
+        if (!AppState.user) {
+          Views.showModal("Profile needed", "Please finish onboarding so SentiraX knows your age and taste.");
+          Router.navigate("onboarding");
+          return;
         }
-      } catch (err) {
-        console.error(err);
-        titleEl.textContent = "Could not load details";
-        overviewEl.textContent = "Something went wrong while fetching more information.";
-      }
-    }
+        const slider = document.getElementById("moodSlider");
+        const moodScore = Number(slider.value || 5);
+        const freeText = document.getElementById("freeText").value.trim();
+        const typeFilter = document.getElementById("typeFilter").value;
+        const maxDurationStr = document.getElementById("maxDuration").value;
+        const maxDuration = maxDurationStr ? Number(maxDurationStr) : null;
 
-    function createStreamingButtons(title) {
-      const row = document.createElement("div");
-      row.className = "stream-row";
+        const moods = Array.from(document.querySelectorAll("#moodTags .mood-tag.selected")).map(x => x.dataset.value);
 
-      const encoded = encodeURIComponent(title);
-
-      const nets = [
-        { name: "Netflix", url: `https://www.netflix.com/search?q=${encoded}` },
-        { name: "Prime Video", url: `https://www.primevideo.com/search?phrase=${encoded}` },
-        { name: "Disney+", url: `https://www.disneyplus.com/search/${encoded}` },
-        { name: "JustWatch", url: `https://www.justwatch.com/search?q=${encoded}` }
-      ];
-
-      nets.forEach(n => {
-        const a = document.createElement("a");
-        a.href = n.url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.className = "stream-btn";
-        a.textContent = n.name;
-        row.appendChild(a);
-      });
-
-      return row;
-    }
-
-    document.getElementById("get-recs-btn").addEventListener("click", async () => {
-      const profile = loadProfileFromStorage();
-      if (!profile) {
-        showOnboardingCard();
-        return;
-      }
-
-      const moods = getSelectedValues("mood-chips");
-      const freeText = document.getElementById("free-text").value.trim();
-      const typeFilter = document.getElementById("type-filter").value;
-      const maxDurationStr = document.getElementById("max-duration").value;
-      const maxDuration = maxDurationStr ? Number(maxDurationStr) : null;
-
-      const payload = {
-        user_profile: profile,
-        check_in: {
+        const checkIn = {
           moods,
+          mood_score: moodScore,
           free_text: freeText,
           type_filter: typeFilter,
           max_duration_minutes: maxDuration
+        };
+        AppState.saveCheckIn(checkIn);
+        Router.navigate("recommendations");
+      },
+
+      recommendations() {
+        return `
+          <div class="center-block">
+            <h2 class="responsive-heading" style="margin-bottom:1rem;">SentiraX suggestions</h2>
+            <p class="small-text" style="margin-bottom:1.4rem;">
+              These will blend your baseline taste with how you’re feeling right now.
+            </p>
+            <div id="recsContainer">
+              <div class="card">
+                <div class="loading">
+                  <div class="spinner"></div>
+                  <p class="small-text">Thinking about your mood and browsing TMDB...</p>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-secondary" style="margin-top:0.9rem;" onclick="Views.refreshRecommendations()">
+              🔄 New picks
+            </button>
+          </div>
+        `;
+      },
+
+      async initRecommendations() {
+        if (!AppState.user || !AppState.lastCheckIn) {
+          const c = document.getElementById("recsContainer");
+          c.innerHTML = `
+            <div class="card">
+              <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
+            </div>
+          `;
+          return;
         }
-      };
+        await Views.fetchRecommendations();
+      },
 
-      const loadingEl = document.getElementById("loading");
-      const recCard = document.getElementById("recommendations-card");
-      const recList = document.getElementById("recommendations-list");
-      const summaryEl = document.getElementById("summary");
-      const errorEl = document.getElementById("checkin-error");
-      const detailsCard = document.getElementById("details-card");
-
-      loadingEl.classList.remove("hidden");
-      recCard.classList.add("hidden");
-      detailsCard.classList.add("hidden");
-      errorEl.classList.add("hidden");
-      errorEl.textContent = "";
-
-      try {
-        const res = await fetch(`${getApiBase()}/api/recommend`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          throw new Error("Server error: " + res.status);
-        }
-
-        const data = await res.json();
-        recList.innerHTML = "";
-
-        (data.recommendations || []).forEach(item => {
-          const div = document.createElement("div");
-          div.className = "recommendation";
-
-          const header = document.createElement("div");
-          header.className = "rec-header";
-
-          const titleWrap = document.createElement("div");
-          const title = document.createElement("h4");
-          title.textContent = item.name || item.title || "Untitled";
-          titleWrap.appendChild(title);
-
-          const meta = document.createElement("div");
-          if (item.genres && item.genres.length) {
-            item.genres.slice(0, 3).forEach(g => {
-              const span = document.createElement("span");
-              span.className = "badge";
-              span.textContent = g;
-              meta.appendChild(span);
-            });
-          }
-          if (item.runtime_minutes) {
-            const span = document.createElement("span");
-            span.className = "badge";
-            span.textContent = `${item.runtime_minutes} min`;
-            meta.appendChild(span);
-          }
-          if (item.is_adult) {
-            const span = document.createElement("span");
-            span.className = "badge badge-18";
-            span.textContent = "18+";
-            meta.appendChild(span);
-          }
-          titleWrap.appendChild(meta);
-          header.appendChild(titleWrap);
-
-          const actions = document.createElement("div");
-          const detailsBtn = document.createElement("button");
-          detailsBtn.textContent = "More details";
-          detailsBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            fetchTitleDetails(item.id);
+      async fetchRecommendations() {
+        const c = document.getElementById("recsContainer");
+        c.innerHTML = `
+          <div class="card">
+            <div class="loading">
+              <div class="spinner"></div>
+              <p class="small-text">Asking Groq to re-rank titles for you...</p>
+            </div>
+          </div>
+        `;
+        try {
+          const body = {
+            user_profile: AppState.user,
+            check_in: AppState.lastCheckIn
+          };
+          const res = await fetch(BACKEND_BASE_URL + "/api/recommend", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
           });
-          actions.appendChild(detailsBtn);
-          header.appendChild(actions);
-
-          div.appendChild(header);
-
-          if (item.summary) {
-            const p = document.createElement("p");
-            p.className = "small";
-            p.textContent = item.summary;
-            div.appendChild(p);
+          const json = await res.json();
+          if (!res.ok) {
+            c.innerHTML = `
+              <div class="card">
+                <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
+                <p class="small-text">${(json && json.error) || ""}</p>
+              </div>
+            `;
+            return;
           }
+          AppState.recommendations = json.recommendations || [];
+          Views.renderRecommendations(json.high_level_summary, AppState.recommendations);
+        } catch (e) {
+          c.innerHTML = `
+            <div class="card">
+              <p class="small-text">Network error while getting recommendations.</p>
+              <p class="small-text">${e.message || e}</p>
+            </div>
+          `;
+        }
+      },
 
-          if (item.reason) {
-            const reason = document.createElement("p");
-            reason.className = "small";
-            reason.textContent = "Why SentiraX picked this: " + item.reason;
-            div.appendChild(reason);
-          }
-
-          const streamRow = createStreamingButtons(item.name || item.title || "");
-          div.appendChild(streamRow);
-
-          recList.appendChild(div);
+      renderRecommendations(summary, recs) {
+        const c = document.getElementById("recsContainer");
+        if (!recs || !recs.length) {
+          c.innerHTML = `
+            <div class="card">
+              <p class="small-text">No suitable titles came back. Try broadening your mood / filters.</p>
+            </div>
+          `;
+          return;
+        }
+        const summaryHtml = summary
+          ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
+          : "";
+        const itemsHtml = recs.map(r => {
+          const name = r.name || r.title || "Untitled";
+          const genres = (r.genres || []).slice(0, 3);
+          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
+          const type = r.type === "show" ? "Series" : "Movie";
+          const safeId = r.id.replace(/"/g, "&quot;");
+          const jsonStr = encodeURIComponent(JSON.stringify(r));
+          return `
+            <div class="title-card" data-title='${jsonStr}'>
+              <div class="title-header">
+                <div class="title-main">
+                  <div class="title-name">${name}</div>
+                  <div class="badge-row">
+                    <span class="badge badge-type">${type}</span>
+                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+                    ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
+                    ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+                  </div>
+                </div>
+                <button class="btn-ghost" onclick="event.stopPropagation(); Views.toggleWatchlist('${safeId}')">
+                  ⭐
+                </button>
+              </div>
+              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+              ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+              ${Views.renderStreamingRowHtml(name)}
+            </div>
+          `;
+        }).join("");
+        c.innerHTML = `
+          <div class="card">
+            ${summaryHtml}
+            ${itemsHtml}
+          </div>
+        `;
+        // attach click handlers for detail navigation
+        document.querySelectorAll(".title-card").forEach(card => {
+          card.addEventListener("click", () => {
+            const encoded = card.getAttribute("data-title");
+            if (!encoded) return;
+            const obj = JSON.parse(decodeURIComponent(encoded));
+            AppState.selectedTitle = obj;
+            Router.navigate("detail", { title: obj });
+          });
         });
+      },
 
-        summaryEl.textContent =
-          data.high_level_summary ||
-          "Here’s what SentiraX thinks fits your current mood and preferences.";
-        recCard.classList.remove("hidden");
-      } catch (err) {
-        console.error(err);
-        errorEl.textContent = "Could not fetch SentiraX recommendations. Try again.";
-        errorEl.classList.remove("hidden");
-      } finally {
-        loadingEl.classList.add("hidden");
+      renderStreamingRowHtml(title) {
+        const q = encodeURIComponent(title);
+        return `
+          <div class="stream-row">
+            <a class="stream-btn" href="https://www.netflix.com/search?q=${q}" target="_blank" rel="noopener noreferrer">Netflix</a>
+            <a class="stream-btn" href="https://www.primevideo.com/search?phrase=${q}" target="_blank" rel="noopener noreferrer">Prime Video</a>
+            <a class="stream-btn" href="https://www.disneyplus.com/search/${q}" target="_blank" rel="noopener noreferrer">Disney+</a>
+            <a class="stream-btn" href="https://www.justwatch.com/search?q=${q}" target="_blank" rel="noopener noreferrer">JustWatch</a>
+          </div>
+        `;
+      },
+
+      refreshRecommendations() {
+        AppState.recommendations = [];
+        Views.fetchRecommendations();
+      },
+
+      toggleWatchlist(id) {
+        const item = AppState.recommendations.find(r => r.id === id) ||
+                     AppState.watchlist.find(r => r.id === id);
+        if (!item) return;
+        const exists = AppState.watchlist.find(r => r.id === id);
+        if (exists) {
+          AppState.removeFromWatchlist(id);
+          Views.showToast("Removed from watchlist");
+        } else {
+          AppState.addToWatchlist(item);
+          Views.showToast("Added to watchlist");
+        }
+      },
+
+      detail(title) {
+        const name = title.name || title.title || "Untitled";
+        const type = title.type === "show" ? "Series" : "Movie";
+        const genres = (title.genres || []).join(", ");
+        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+
+        return `
+          <div class="center-block">
+            <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
+            <div class="card" style="margin-top:1rem;">
+              <div class="section-label">Title</div>
+              <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
+              <p class="small-text" style="margin-bottom:.6rem;">
+                ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
+              </p>
+              ${title.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+              <p class="small-text" style="margin-top:.8rem;">
+                ${title.summary || "Plot summary will appear once details load."}
+              </p>
+              ${title.reason ? `
+                <div style="margin-top:1rem;">
+                  <div class="detail-section-title">Why SentiraX picked this</div>
+                  <p class="small-text">${title.reason}</p>
+                </div>
+              ` : ""}
+              <div style="margin-top:1rem;">
+                <div class="detail-section-title">Watch it on</div>
+                ${Views.renderStreamingRowHtml(name)}
+              </div>
+              <div id="detailMeta" style="margin-top:1rem;"></div>
+            </div>
+          </div>
+        `;
+      },
+
+      async initDetail(title) {
+        const container = document.getElementById("detailMeta");
+        const cacheKey = `${title.type}-${title.tmdb_id}`;
+        if (AppState.detailsCache[cacheKey]) {
+          Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
+          return;
+        }
+        container.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p class="small-text">Loading cast and watch providers...</p>
+          </div>
+        `;
+        try {
+          const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: title.id })
+          });
+          const json = await res.json();
+          if (!res.ok) {
+            container.innerHTML = `<p class="small-text">Could not load extra details.</p>`;
+            return;
+          }
+          AppState.detailsCache[cacheKey] = json;
+          Views.renderDetailMeta(json, container);
+        } catch (e) {
+          container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
+        }
+      },
+
+      renderDetailMeta(details, container) {
+        const cast = details.cast || [];
+        const wp = details.watch_providers || {};
+        const groups = [
+          { key:"flatrate", label:"Streaming" },
+          { key:"rent", label:"Rent" },
+          { key:"buy", label:"Buy" }
+        ];
+        let castHtml = "";
+        if (cast.length) {
+          castHtml = `
+            <div class="detail-section-title">Cast</div>
+            <ul class="cast-list">
+              ${cast.slice(0,8).map(c => `
+                <li>${c.name}${c.character ? " as " + c.character : ""}</li>
+              `).join("")}
+            </ul>
+          `;
+        }
+        let providersHtml = "";
+        const groupBlocks = groups.map(g => {
+          const list = wp[g.key] || [];
+          if (!list.length) return "";
+          const names = list.map((p, idx) =>
+            `<span class="provider-name">${p.provider_name}${idx < list.length - 1 ? ", " : ""}</span>`
+          ).join("");
+          return `
+            <div class="provider-group">
+              <div class="provider-group-title">${g.label}</div>
+              <div>${names}</div>
+            </div>
+          `;
+        }).filter(Boolean).join("");
+        if (groupBlocks) {
+          providersHtml = `
+            <div class="detail-section-title">Where TMDB says it’s available</div>
+            <div class="providers-groups">${groupBlocks}</div>
+            <p class="small-text" style="margin-top:.4rem;">
+              Availability is region-dependent and can change. Use the watch buttons above to double-check.
+            </p>
+          `;
+        }
+        container.innerHTML = `
+          ${castHtml}
+          ${providersHtml}
+        `;
+      },
+
+      watchlist() {
+        const list = AppState.watchlist;
+        if (!list.length) {
+          return `
+            <div class="center-block" style="text-align:center;padding:2.4rem 0;">
+              <div style="font-size:3rem;margin-bottom:.7rem;">📺</div>
+              <h2 class="responsive-heading" style="margin-bottom:.6rem;">Your watchlist is empty</h2>
+              <p class="small-text" style="margin-bottom:1.4rem;">Add shows and movies from your SentiraX picks to keep track of what you want to watch.</p>
+              <button class="btn btn-primary" onclick="Router.navigate('recommendations')">Go to Discover</button>
+            </div>
+          `;
+        }
+        const items = list.map(r => {
+          const name = r.name || r.title || "Untitled";
+          const type = r.type === "show" ? "Series" : "Movie";
+          const genres = (r.genres || []).slice(0,3).join(", ");
+          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
+          const jsonStr = encodeURIComponent(JSON.stringify(r));
+          return `
+            <div class="title-card" data-title='${jsonStr}'>
+              <div class="title-header">
+                <div class="title-main">
+                  <div class="title-name">${name}</div>
+                  <div class="badge-row">
+                    <span class="badge badge-type">${type}</span>
+                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+                    ${genres ? `<span class="badge">${genres}</span>` : ""}
+                  </div>
+                </div>
+                <button class="btn-ghost" onclick="event.stopPropagation(); Views.removeFromWatchlist('${r.id.replace(/"/g, "&quot;")}')">
+                  🗑️
+                </button>
+              </div>
+              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+              ${Views.renderStreamingRowHtml(name)}
+            </div>
+          `;
+        }).join("");
+        return `
+          <div class="center-block">
+            <h2 class="responsive-heading" style="margin-bottom:1rem;">My watchlist</h2>
+            <div class="card">
+              ${items}
+            </div>
+          </div>
+        `;
+      },
+
+      initWatchlist() {
+        document.querySelectorAll(".title-card").forEach(card => {
+          card.addEventListener("click", () => {
+            const encoded = card.getAttribute("data-title");
+            if (!encoded) return;
+            const obj = JSON.parse(decodeURIComponent(encoded));
+            AppState.selectedTitle = obj;
+            Router.navigate("detail", { title: obj });
+          });
+        });
+      },
+
+      removeFromWatchlist(id) {
+        AppState.removeFromWatchlist(id);
+        Router.navigate("watchlist");
+      },
+
+      settings() {
+        const user = AppState.user;
+        return `
+          <div class="center-block">
+            <h2 class="responsive-heading" style="margin-bottom:1.1rem;">Settings</h2>
+            <div class="card">
+              <div class="section-label">Profile</div>
+              ${user ? `
+                <p class="small-text"><strong>Age:</strong> ${user.age}</p>
+                <p class="small-text"><strong>Gender:</strong> ${user.gender || "Not set"}</p>
+                <p class="small-text"><strong>Liked genres:</strong> ${(user.liked_genres || []).join(", ") || "None set"}</p>
+                <p class="small-text"><strong>Disliked genres:</strong> ${(user.disliked_genres || []).join(", ") || "None set"}</p>
+                <p class="small-text"><strong>Goals:</strong> ${(user.goals || []).join(", ") || "None set"}</p>
+                <p class="small-text"><strong>Allow 18+:</strong> ${user.allow_adult ? "Yes (18+)" : "No"}</p>
+              ` : `<p class="small-text">No profile yet. Complete onboarding to set one.</p>`}
+            </div>
+            <div class="card">
+              <div class="section-label">Usage</div>
+              <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
+              <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
+            </div>
+            <div class="card">
+              <div class="section-label">Data</div>
+              <p class="small-text" style="margin-bottom:0.8rem;">
+                Your profile and history are stored locally in this browser and sent to the backend only for generating recommendations. You can clear everything anytime.
+              </p>
+              <button class="btn btn-secondary" style="margin-bottom:0.6rem;" onclick="Views.clearHistory()">Clear history</button>
+              <button class="btn btn-secondary" onclick="Views.resetApp()">Reset all & start over</button>
+            </div>
+          </div>
+        `;
+      },
+
+      clearHistory() {
+        AppState.checkins = [];
+        Storage.set("checkins", []);
+        Views.showToast("History cleared");
+        Router.navigate("settings");
+      },
+
+      resetApp() {
+        Views.showConfirm(
+          "Reset SentiraX?",
+          "This clears your profile, watchlist, and mood history.",
+          () => {
+            AppState.reset();
+            Router.navigate("welcome");
+          }
+        );
+      },
+
+      showModal(title, message) {
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.innerHTML = `
+          <div class="modal-content">
+            <h3 style="margin-bottom:.6rem;">${title}</h3>
+            <p class="small-text" style="margin-bottom:1rem;">${message}</p>
+            <button class="btn btn-primary" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">OK</button>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      },
+
+      showConfirm(title, message, onConfirm) {
+        const overlay = document.createElement("div");
+        overlay.className = "modal-overlay";
+        overlay.innerHTML = `
+          <div class="modal-content">
+            <h3 style="margin-bottom:.6rem;">${title}</h3>
+            <p class="small-text" style="margin-bottom:1rem;">${message}</p>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+              <button class="btn btn-secondary" style="flex:1;" data-role="cancel">Cancel</button>
+              <button class="btn btn-primary" style="flex:1;" data-role="ok">Confirm</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-role="cancel"]').onclick = () => overlay.remove();
+        overlay.querySelector('[data-role="ok"]').onclick = () => {
+          overlay.remove();
+          if (typeof onConfirm === "function") onConfirm();
+        };
+      },
+
+      showToast(msg) {
+        const existing = document.getElementById("sentirax_toast");
+        if (existing) existing.remove();
+        const el = document.createElement("div");
+        el.id = "sentirax_toast";
+        el.style.position = "fixed";
+        el.style.bottom = "80px";
+        el.style.left = "50%";
+        el.style.transform = "translateX(-50%)";
+        el.style.background = "#020617";
+        el.style.color = "#e5e7eb";
+        el.style.border = "1px solid #22c55e55";
+        el.style.borderRadius = "999px";
+        el.style.padding = "0.45rem 0.9rem";
+        el.style.fontSize = "0.8rem";
+        el.style.boxShadow = "0 18px 40px rgba(0,0,0,0.9)";
+        el.style.zIndex = "60";
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => {
+          el.style.transition = "opacity .3s ease";
+          el.style.opacity = "0";
+          setTimeout(() => el.remove(), 300);
+        }, 1500);
       }
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => {
+          Router.navigate(item.dataset.view);
+        });
+      });
+      AppState.init();
+      Router.navigate(AppState.currentView);
     });
+
+    // PWA service worker (optional if you have one)
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("./service-worker.js")
+          .catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
