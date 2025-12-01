@@ -135,6 +135,21 @@
     button:hover:not(:disabled) {
       transform: translateY(-1px);
     }
+    .stream-btn {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      font-size: 0.75rem;
+      text-decoration: none;
+      background: #020617;
+      color: #e5e7eb;
+      margin-right: 4px;
+      margin-top: 4px;
+    }
+    .stream-btn:hover {
+      border-color: #4ade80;
+    }
     .small {
       font-size: 0.8rem;
       color: #9ca3af;
@@ -228,6 +243,9 @@
     .provider-name {
       font-size: 0.8rem;
       color: #e5e7eb;
+    }
+    .stream-row {
+      margin-top: 6px;
     }
     @media (max-width: 600px) {
       .container {
@@ -359,7 +377,6 @@
   </div>
 
   <script>
-    // ===== API base URL (Render backend, production) =====
     const RENDER_BACKEND_URL = "https://sentirax-backend.onrender.com";
 
     function getApiBase() {
@@ -369,7 +386,6 @@
       return RENDER_BACKEND_URL;
     }
 
-    // -------- static data for chips --------
     const GENRES = [
       "Action", "Comedy", "Drama", "Romance", "Horror",
       "Thriller", "Sci-Fi", "Fantasy", "Anime", "Documentary",
@@ -391,7 +407,6 @@
       "Angry", "Romantic", "Curious", "Motivated", "Neutral"
     ];
 
-    // -------- helper to make chip group --------
     function createChipGroup(containerId, values, multi = true) {
       const container = document.getElementById(containerId);
       container.innerHTML = "";
@@ -417,7 +432,6 @@
         .map(ch => ch.dataset.value);
     }
 
-    // -------- local "profile" state (stored in localStorage) --------
     function saveProfileToStorage(profile) {
       localStorage.setItem("sentirax_profile", JSON.stringify(profile));
     }
@@ -438,7 +452,6 @@
       document.getElementById("checkin-card").classList.add("hidden");
     }
 
-    // -------- init UI --------
     createChipGroup("liked-genres", GENRES);
     createChipGroup("disliked-genres", GENRES);
     createChipGroup("goals", GOALS);
@@ -450,7 +463,6 @@
     const profileStatus = document.getElementById("profile-status");
     const ageError = document.getElementById("age-error");
 
-    // load profile if exists
     const existingProfile = loadProfileFromStorage();
     if (existingProfile) {
       ageInput.value = existingProfile.age;
@@ -473,7 +485,6 @@
       showOnboardingCard();
     }
 
-    // age gate for adult content
     ageInput.addEventListener("input", () => {
       const age = Number(ageInput.value || 0);
       if (age < 18) {
@@ -484,7 +495,6 @@
       }
     });
 
-    // -------- onboarding save --------
     document.getElementById("save-profile-btn").addEventListener("click", () => {
       const age = Number(ageInput.value || 0);
       if (!age || age < 13 || age > 120) {
@@ -508,7 +518,6 @@
       showCheckinCard();
     });
 
-    // -------- details panel helpers --------
     async function fetchTitleDetails(id) {
       const detailsCard = document.getElementById("details-card");
       const titleEl = document.getElementById("details-title");
@@ -532,7 +541,7 @@
         const res = await fetch(`${getApiBase()}/api/title-details`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id }) // backend parses "movie-12345"
+          body: JSON.stringify({ id })
         });
 
         if (!res.ok) throw new Error("Failed to fetch details");
@@ -551,7 +560,6 @@
 
         metaEl.textContent = metaBits.join(" • ");
 
-        // Cast
         if (data.cast && data.cast.length) {
           castList.innerHTML = "";
           data.cast.forEach(c => {
@@ -564,7 +572,6 @@
           castSection.classList.remove("hidden");
         }
 
-        // Watch providers
         const wp = data.watch_providers || {};
         const groups = [
           { key: "flatrate", label: "Streaming" },
@@ -607,7 +614,32 @@
       }
     }
 
-    // -------- check-in submit --------
+    function createStreamingButtons(title) {
+      const row = document.createElement("div");
+      row.className = "stream-row";
+
+      const encoded = encodeURIComponent(title);
+
+      const nets = [
+        { name: "Netflix", url: `https://www.netflix.com/search?q=${encoded}` },
+        { name: "Prime Video", url: `https://www.primevideo.com/search?phrase=${encoded}` },
+        { name: "Disney+", url: `https://www.disneyplus.com/search/${encoded}` },
+        { name: "JustWatch", url: `https://www.justwatch.com/search?q=${encoded}` }
+      ];
+
+      nets.forEach(n => {
+        const a = document.createElement("a");
+        a.href = n.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "stream-btn";
+        a.textContent = n.name;
+        row.appendChild(a);
+      });
+
+      return row;
+    }
+
     document.getElementById("get-recs-btn").addEventListener("click", async () => {
       const profile = loadProfileFromStorage();
       if (!profile) {
@@ -694,13 +726,15 @@
           titleWrap.appendChild(meta);
           header.appendChild(titleWrap);
 
-          const btn = document.createElement("button");
-          btn.textContent = "More details";
-          btn.addEventListener("click", (e) => {
+          const actions = document.createElement("div");
+          const detailsBtn = document.createElement("button");
+          detailsBtn.textContent = "More details";
+          detailsBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             fetchTitleDetails(item.id);
           });
-          header.appendChild(btn);
+          actions.appendChild(detailsBtn);
+          header.appendChild(actions);
 
           div.appendChild(header);
 
@@ -717,6 +751,9 @@
             reason.textContent = "Why SentiraX picked this: " + item.reason;
             div.appendChild(reason);
           }
+
+          const streamRow = createStreamingButtons(item.name || item.title || "");
+          div.appendChild(streamRow);
 
           recList.appendChild(div);
         });
