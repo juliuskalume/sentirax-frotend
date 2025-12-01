@@ -307,13 +307,13 @@
     }
 
     .title-banner {
-  width: 100%;
-  border-radius: 12px;
-  margin-bottom: 0.7rem;
-  max-height: 220px;
-  object-fit: cover;
-  background-color: #020617;
-}
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 0.7rem;
+      max-height: 220px;
+      object-fit: cover;
+      background-color: #020617;
+    }
 
     .title-card {
       background: #020617;
@@ -999,7 +999,8 @@
         }
         err.classList.add("hidden");
         function getSelected(containerId) {
-          return Array.from(document.querySelectorAll(`#${containerId} .mood-tag.selected`)).map(x => x.dataset.value);
+          return Array.from(document.querySelectorAll(`#${containerId} .mood-tag.selected`))
+            .map(x => x.dataset.value);
         }
         const gender = document.getElementById("genderInput").value || null;
         const profile = {
@@ -1101,7 +1102,8 @@
         const maxDurationStr = document.getElementById("maxDuration").value;
         const maxDuration = maxDurationStr ? Number(maxDurationStr) : null;
 
-        const moods = Array.from(document.querySelectorAll("#moodTags .mood-tag.selected")).map(x => x.dataset.value);
+        const moods = Array.from(document.querySelectorAll("#moodTags .mood-tag.selected"))
+          .map(x => x.dataset.value);
 
         const checkIn = {
           moods,
@@ -1211,46 +1213,46 @@
           ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
           : "";
         const itemsHtml = recs.map(r => {
-  const name = r.name || r.title || "Untitled";
-  const genres = (r.genres || []).slice(0, 3);
-  const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
-  const type = r.type === "show" ? "Series" : "Movie";
-  const jsonStr = encodeURIComponent(JSON.stringify(r));
+          const name = r.name || r.title || "Untitled";
+          const genres = (r.genres || []).slice(0, 3);
+          const runtime = r.runtime_minutes ? \`\${r.runtime_minutes} min\` : null;
+          const type = r.type === "show" ? "Series" : "Movie";
+          const jsonStr = encodeURIComponent(JSON.stringify(r));
 
-  const posterUrl = r.poster_path
-    ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
-    : null;
+          const posterUrl = r.poster_path
+            ? \`https://image.tmdb.org/t/p/w342\${r.poster_path}\`
+            : null;
 
-  return `
-    <div class="title-card" data-title='${jsonStr}'>
-      ${posterUrl ? `
-        <img
-          class="title-banner"
-          src="${posterUrl}"
-          alt="${name} poster"
-          loading="lazy"
-        />
-      ` : ""}
-      <div class="title-header">
-        <div class="title-main">
-          <div class="title-name">${name}</div>
-          <div class="badge-row">
-            <span class="badge badge-type">${type}</span>
-            ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-            ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
-            ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
-          </div>
-        </div>
-        <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-          ⭐
-        </button>
-      </div>
-      ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-      ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
-      ${Views.renderStreamingRowHtml(name)}
-    </div>
-  `;
-}).join("");
+          return `
+            <div class="title-card" data-title='${jsonStr}'>
+              ${posterUrl ? `
+                <img
+                  class="title-banner"
+                  src="${posterUrl}"
+                  alt="${name} poster"
+                  loading="lazy"
+                />
+              ` : ""}
+              <div class="title-header">
+                <div class="title-main">
+                  <div class="title-name">${name}</div>
+                  <div class="badge-row">
+                    <span class="badge badge-type">${type}</span>
+                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+                    ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
+                    ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+                  </div>
+                </div>
+                <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+                  ⭐
+                </button>
+              </div>
+              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+              ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+              ${Views.renderStreamingRowHtml(name)}
+            </div>
+          `;
+        }).join("");
 
         c.innerHTML = `
           <div class="card">
@@ -1295,7 +1297,7 @@
         Views.fetchRecommendations();
       },
 
-            toggleWatchlist(id) {
+      toggleWatchlist(id) {
         const item =
           AppState.recommendations.find(r => r.id === id) ||
           AppState.watchlist.find(r => r.id === id);
@@ -1314,10 +1316,10 @@
         const name = title.name || title.title || "Untitled";
         const type = title.type === "show" ? "Series" : "Movie";
         const genres = (title.genres || []).join(", ");
-        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+        const runtime = title.runtime_minutes ? \`\${title.runtime_minutes} min\` : null;
 
         const posterUrl = title.poster_path
-          ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+          ? \`https://image.tmdb.org/t/p/w500\${title.poster_path}\`
           : null;
 
         return `
@@ -1355,19 +1357,31 @@
                 <button class="btn btn-secondary" id="detailWatchlistBtn">
                   ☆ Add to watchlist
                 </button>
+                <button class="btn btn-secondary" id="wikiDetailsBtn">
+                  📖 See full details (Wikipedia)
+                </button>
               </div>
               <div id="detailMeta" style="margin-top:1rem;"></div>
+              <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
             </div>
           </div>
         `;
       },
 
       async initDetail(title) {
-        // wire up watchlist button
+        // watchlist button setup
         Views.setupDetailWatchlist(title);
 
+        // Wikipedia full details button
+        const wikiBtn = document.getElementById("wikiDetailsBtn");
+        if (wikiBtn) {
+          wikiBtn.addEventListener("click", () => {
+            Views.fetchWikiDetails(title);
+          });
+        }
+
         const container = document.getElementById("detailMeta");
-        const cacheKey = `${title.type}-${title.tmdb_id}`;
+        const cacheKey = \`\${title.type}-\${title.tmdb_id}\`;
         if (AppState.detailsCache[cacheKey]) {
           Views.renderDetailMeta(AppState.detailsCache[cacheKey], container);
           return;
@@ -1396,6 +1410,65 @@
         }
       },
 
+      async fetchWikiDetails(title) {
+        const btn = document.getElementById("wikiDetailsBtn");
+        const container = document.getElementById("wikiDetailsContainer");
+        if (!btn || !container) return;
+
+        const name = title.name || title.title || "Untitled";
+
+        const year =
+          title.release_year ||
+          title.year ||
+          null;
+
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Loading from Wikipedia...";
+        container.innerHTML = `
+          <div class="loading">
+            <div class="spinner"></div>
+            <p class="small-text">Pulling full details from Wikipedia...</p>
+          </div>
+        `;
+
+        try {
+          const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: name, year })
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.html) {
+            container.innerHTML = `
+              <p class="small-text">Couldn’t load Wikipedia details for this title.</p>
+            `;
+            return;
+          }
+
+          container.innerHTML = `
+            <div class="detail-section-title">From Wikipedia</div>
+            <div class="small-text" style="max-height: 400px; overflow:auto; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 0.75rem; background: #020617;">
+              ${data.html}
+            </div>
+            ${data.url ? `
+              <p class="small-text" style="margin-top:.4rem;">
+                <a href="${data.url}" target="_blank" rel="noopener noreferrer">
+                  Open on Wikipedia →
+                </a>
+              </p>
+            ` : ""}
+          `;
+        } catch (e) {
+          container.innerHTML = `
+            <p class="small-text">Error loading Wikipedia details: ${e.message || e}</p>
+          `;
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalLabel;
+        }
+      },
 
       setupDetailWatchlist(title) {
         const btn = document.getElementById("detailWatchlistBtn");
@@ -1485,7 +1558,7 @@
           const name = r.name || r.title || "Untitled";
           const type = r.type === "show" ? "Series" : "Movie";
           const genres = (r.genres || []).slice(0,3).join(", ");
-          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
+          const runtime = r.runtime_minutes ? \`\${r.runtime_minutes} min\` : "";
           const jsonStr = encodeURIComponent(JSON.stringify(r));
           return `
             <div class="title-card" data-title='${jsonStr}'>
