@@ -1295,7 +1295,7 @@
         Views.fetchRecommendations();
       },
 
-      toggleWatchlist(id) {
+            toggleWatchlist(id) {
         const item =
           AppState.recommendations.find(r => r.id === id) ||
           AppState.watchlist.find(r => r.id === id);
@@ -1310,62 +1310,60 @@
         }
       },
 
-     detail(title) {
-  const name = title.name || title.title || "Untitled";
-  const type = title.type === "show" ? "Series" : "Movie";
-  const genres = (title.genres || []).join(", ");
-  const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+      detail(title) {
+        const name = title.name || title.title || "Untitled";
+        const type = title.type === "show" ? "Series" : "Movie";
+        const genres = (title.genres || []).join(", ");
+        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
 
-  // TMDB poster URL (falls back gracefully if missing)
-  const posterUrl = title.poster_path
-    ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
-    : null;
+        const posterUrl = title.poster_path
+          ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+          : null;
 
-  return `
-    <div class="center-block">
-      <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
-      <div class="card" style="margin-top:1rem;">
-        ${posterUrl ? `
-          <img
-            class="title-banner"
-            src="${posterUrl}"
-            alt="${name} poster"
-            loading="lazy"
-          />
-        ` : ""}
-        <div class="section-label">Title</div>
-        <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
-        <p class="small-text" style="margin-bottom:.6rem;">
-          ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
-          ${title.is_adult ? ` • <span class="badge badge-18">18+</span>` : ""}
-        </p>
-        <p class="small-text" style="margin-top:.8rem;">
-          ${title.summary || "Plot summary will appear once details load."}
-        </p>
-        ${title.reason ? `
-          <div style="margin-top:1rem;">
-            <div class="detail-section-title">Why SentiraX picked this</div>
-            <p class="small-text">${title.reason}</p>
+        return `
+          <div class="center-block">
+            <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
+            <div class="card" style="margin-top:1rem;">
+              ${posterUrl ? `
+                <img
+                  class="title-banner"
+                  src="${posterUrl}"
+                  alt="${name} poster"
+                  loading="lazy"
+                />
+              ` : ""}
+              <div class="section-label">Title</div>
+              <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
+              <p class="small-text" style="margin-bottom:.6rem;">
+                ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
+                ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
+              </p>
+              <p class="small-text" style="margin-top:.8rem;">
+                ${title.summary || "Plot summary will appear once details load."}
+              </p>
+              ${title.reason ? `
+                <div style="margin-top:1rem;">
+                  <div class="detail-section-title">Why SentiraX picked this</div>
+                  <p class="small-text">${title.reason}</p>
+                </div>
+              ` : ""}
+              <div style="margin-top:1rem;">
+                <div class="detail-section-title">Watch it on</div>
+                ${Views.renderStreamingRowHtml(name)}
+              </div>
+              <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary" id="detailWatchlistBtn">
+                  ☆ Add to watchlist
+                </button>
+              </div>
+              <div id="detailMeta" style="margin-top:1rem;"></div>
+            </div>
           </div>
-        ` : ""}
-        <div style="margin-top:1rem;">
-          <div class="detail-section-title">Watch it on</div>
-          ${Views.renderStreamingRowHtml(name)}
-        </div>
-        <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
-          <button class="btn btn-secondary" id="detailWatchlistBtn">
-            ☆ Add to watchlist
-          </button>
-        </div>
-        <div id="detailMeta" style="margin-top:1rem;"></div>
-      </div>
-    </div>
-  `;
-}
-
+        `;
+      },
 
       async initDetail(title) {
-        // watchlist button setup
+        // wire up watchlist button
         Views.setupDetailWatchlist(title);
 
         const container = document.getElementById("detailMeta");
@@ -1397,6 +1395,7 @@
           container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
         }
       },
+
 
       setupDetailWatchlist(title) {
         const btn = document.getElementById("detailWatchlistBtn");
