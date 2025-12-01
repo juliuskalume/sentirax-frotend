@@ -1837,13 +1837,14 @@
   const textEl = document.getElementById("wikiFullscreenText");
   const linkEl = document.getElementById("wikiFullscreenLink");
 
-  if (!modal || !titleEl || !textEl || !linkEl) return;
-
-  titleEl.textContent = title || "Wikipedia details";
-  textEl.innerHTML = html || "<p class=\"small-text\">No details available.</p>";
+  titleEl.textContent = title || "Wikipedia";
+  textEl.innerHTML = html;
   linkEl.innerHTML = url
-    ? `<a href="${url}" target="_blank" rel="noopener noreferrer" class="small-text">Open on Wikipedia →</a>`
+    ? `<a href="${url}" target="_blank" class="small-text">Open on Wikipedia →</a>`
     : "";
+
+  // Attach Wikipedia link interception
+  Views.hijackWikipediaLinks(textEl);
 
   modal.classList.remove("hidden");
 },
@@ -1851,6 +1852,48 @@
 closeWikiFullscreen() {
   const modal = document.getElementById("wikiFullscreen");
   if (modal) modal.classList.add("hidden");
+},
+      hijackWikipediaLinks(container) {
+  const links = container.querySelectorAll("a[href]");
+
+  links.forEach(link => {
+    const href = link.getAttribute("href");
+
+    // Only intercept Wikipedia internal links
+    if (!href.includes("wikipedia.org")) return;
+
+    link.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      // Extract page title from URL
+      let pageTitle = href.substring(href.lastIndexOf("/") + 1);
+      pageTitle = decodeURIComponent(pageTitle.replace(/_/g, " "));
+
+      // Load new Wikipedia page into modal
+      const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: pageTitle })
+      });
+
+      const data = await res.json();
+
+      // Update modal with new content
+      document.getElementById("wikiFullscreenTitle").textContent =
+        data.wiki_title || pageTitle;
+
+      const textEl = document.getElementById("wikiFullscreenText");
+      textEl.innerHTML = data.html || "<p>Could not load page.</p>";
+
+      // re-attach interceptors for new content
+      Views.hijackWikipediaLinks(textEl);
+
+      if (data.url) {
+        document.getElementById("wikiFullscreenLink").innerHTML =
+          `<a href="${data.url}" target="_blank" class="small-text">Open original →</a>`;
+      }
+    });
+  });
 }
     };
 
