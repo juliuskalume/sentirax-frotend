@@ -1976,8 +1976,7 @@ closeWikiFullscreen() {
     // Show a small loading state in-place
     const textEl = document.getElementById("wikiFullscreenText");
     const titleEl = document.getElementById("wikiFullscreenTitle");
-    const linkEl = document.getElementById("wikiFullscreenLink");
-
+    
     if (textEl) {
       textEl.innerHTML = `
         <div class="loading">
@@ -2005,13 +2004,6 @@ closeWikiFullscreen() {
 
       if (titleEl) {
         titleEl.textContent = data.wiki_title || pageTitle;
-      }
-
-      if (textEl) {
-        textEl.innerHTML = data.html;
-        // Re-attach handlers for the new content
-        container._wikiHandlerAttached = false; // reset flag
-        Views.hijackWikipediaLinks(textEl);
       }
 
       if (linkEl) {
@@ -2089,7 +2081,6 @@ closeWikiFullscreen() {
   </div>
 </div>
     <div id="wikiFullscreenText" style="flex:1;overflow:auto;border:1px solid var(--border-subtle);border-radius:10px;padding:0.75rem;background:#020617;font-size:0.85rem;"></div>
-    <div id="wikiFullscreenLink" style="margin-top:.5rem;"></div>
   </div>
 </div>
 
