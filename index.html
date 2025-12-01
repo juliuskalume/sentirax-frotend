@@ -623,6 +623,51 @@
     .error-text { font-size: 0.8rem; color: #fecaca; margin-top: 0.4rem; }
 
     .hidden { display: none !important; }
+
+    .wiki-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  color: #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+  z-index: 9999;
+  transition: opacity 0.25s ease;
+}
+
+.wiki-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.wiki-modal-content {
+  background: #0f172a;
+  padding: 1.8rem;
+  border-radius: 1rem;
+  max-width: 700px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  animation: wikiFadeIn 0.25s ease;
+}
+
+@keyframes wikiFadeIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.wiki-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.8rem;
+  float: right;
+  cursor: pointer;
+}
+
   </style>
 </head>
 <body>
@@ -1388,9 +1433,11 @@
                 <button class="btn btn-secondary" id="detailWatchlistBtn">
                   ☆ Add to watchlist
                 </button>
-                <button class="btn btn-secondary" id="wikiDetailsBtn">
-                  📖 See full details (Wikipedia)
-                </button>
+                <button class="btn btn-secondary" onclick="Views.openWikiFullscreen(
+  '${wiki.wiki_title}',
+  `${wiki.summary.replace(/`/g, "\\`")}`,
+  '${wiki.url}'
+)">Read full Wikipedia details</button>
               </div>
               <div id="detailMeta" style="margin-top:1rem;"></div>
               <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
@@ -1759,7 +1806,21 @@
           el.style.opacity = "0";
           setTimeout(() => el.remove(), 300);
         }, 1500);
-      }
+      },
+
+      openWikiFullscreen(title, text, link) {
+  const modal = document.getElementById("wikiFullscreen");
+  document.getElementById("wikiFullscreenTitle").textContent = title;
+  document.getElementById("wikiFullscreenText").textContent = text;
+  document.getElementById("wikiFullscreenLink").innerHTML =
+    link ? `<a href="${link}" target="_blank" class="small-text">Open Wikipedia →</a>` : "";
+
+  modal.classList.remove("hidden");
+},
+
+closeWikiFullscreen() {
+  document.getElementById("wikiFullscreen").classList.add("hidden");
+}
     };
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -1781,5 +1842,15 @@
       });
     }
   </script>
+  
+  <div id="wikiFullscreen" class="wiki-modal hidden">
+  <div class="wiki-modal-content">
+    <button class="wiki-close-btn" onclick="Views.closeWikiFullscreen()">✕</button>
+    <h2 id="wikiFullscreenTitle"></h2>
+    <p id="wikiFullscreenText"></p>
+    <p id="wikiFullscreenLink"></p>
+  </div>
+</div>
+
 </body>
 </html>
