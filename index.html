@@ -1237,27 +1237,35 @@
       : "";
 
     return `
-      <div class="title-card" data-title='${jsonStr}'>
-        ${posterHtml}
-        <div class="title-header">
-          <div class="title-main">
-            <div class="title-name">${name}</div>
-            <div class="badge-row">
-              <span class="badge badge-type">${type}</span>
-              ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-              ${genres.map((g) => `<span class="badge">${g}</span>`).join("")}
-              ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
-            </div>
-          </div>
-          <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-            ⭐
-          </button>
+  <div class="title-card" data-id="${r.id}">
+    ${posterUrl ? `
+      <img
+        class="title-banner"
+        src="${posterUrl}"
+        alt="${name} poster"
+        loading="lazy"
+      />
+    ` : ""}
+    <div class="title-header">
+      <div class="title-main">
+        <div class="title-name">${name}</div>
+        <div class="badge-row">
+          <span class="badge badge-type">${type}</span>
+          ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+          ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
+          ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
         </div>
-        ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-        ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
-        ${Views.renderStreamingRowHtml(name)}
       </div>
-    `;
+      <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+        ⭐
+      </button>
+    </div>
+    ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+    ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+    ${Views.renderStreamingRowHtml(name)}
+  </div>
+`;
+
   }).join("");
 
   c.innerHTML = `
@@ -1268,15 +1276,16 @@
   `;
 
   // detail navigation
-  document.querySelectorAll(".title-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const encoded = card.getAttribute("data-title");
-      if (!encoded) return;
-      const obj = JSON.parse(decodeURIComponent(encoded));
-      AppState.selectedTitle = obj;
-      Router.navigate("detail", { title: obj });
-    });
+  document.querySelectorAll(".title-card").forEach(card => {
+  card.addEventListener("click", () => {
+    const id = card.dataset.id;
+    if (!id) return;
+    const obj = AppState.recommendations.find(r => String(r.id) === String(id));
+    if (!obj) return;
+    AppState.selectedTitle = obj;
+    Router.navigate("detail", { title: obj });
   });
+});
 
   // watchlist toggles
   document.querySelectorAll(".watchlist-toggle").forEach((btn) => {
@@ -1564,31 +1573,31 @@
           `;
         }
         const items = list.map(r => {
-          const name = r.name || r.title || "Untitled";
-          const type = r.type === "show" ? "Series" : "Movie";
-          const genres = (r.genres || []).slice(0,3).join(", ");
-          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
-          const jsonStr = encodeURIComponent(JSON.stringify(r));
-          return `
-            <div class="title-card" data-title='${jsonStr}'>
-              <div class="title-header">
-                <div class="title-main">
-                  <div class="title-name">${name}</div>
-                  <div class="badge-row">
-                    <span class="badge badge-type">${type}</span>
-                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-                    ${genres ? `<span class="badge">${genres}</span>` : ""}
-                  </div>
-                </div>
-                <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
-                  🗑️
-                </button>
-              </div>
-              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-              ${Views.renderStreamingRowHtml(name)}
-            </div>
-          `;
-        }).join("");
+  const name = r.name || r.title || "Untitled";
+  const type = r.type === "show" ? "Series" : "Movie";
+  const genres = (r.genres || []).slice(0,3).join(", ");
+  const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
+  return `
+    <div class="title-card" data-id="${r.id}">
+      <div class="title-header">
+        <div class="title-main">
+          <div class="title-name">${name}</div>
+          <div class="badge-row">
+            <span class="badge badge-type">${type}</span>
+            ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+            ${genres ? `<span class="badge">${genres}</span>` : ""}
+          </div>
+        </div>
+        <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
+          🗑️
+        </button>
+      </div>
+      ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+      ${Views.renderStreamingRowHtml(name)}
+    </div>
+  `;
+}).join("");
+        
         return `
           <div class="center-block">
             <h2 class="responsive-heading" style="margin-bottom:1rem;">My watchlist</h2>
@@ -1600,23 +1609,27 @@
       },
 
       initWatchlist() {
-        document.querySelectorAll(".title-card").forEach(card => {
-          card.addEventListener("click", () => {
-            const encoded = card.getAttribute("data-title");
-            if (!encoded) return;
-            const obj = JSON.parse(decodeURIComponent(encoded));
-            AppState.selectedTitle = obj;
-            Router.navigate("detail", { title: obj });
-          });
-        });
-        document.querySelectorAll(".watchlist-remove").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const id = btn.dataset.id;
-            Views.removeFromWatchlist(id);
-          });
-        });
-      },
+  document.querySelectorAll(".title-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const id = card.dataset.id;
+      if (!id) return;
+      const obj =
+        AppState.watchlist.find(r => String(r.id) === String(id)) ||
+        AppState.recommendations.find(r => String(r.id) === String(id));
+      if (!obj) return;
+      AppState.selectedTitle = obj;
+      Router.navigate("detail", { title: obj });
+    });
+  });
+
+  document.querySelectorAll(".watchlist-remove").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      Views.removeFromWatchlist(id);
+    });
+  });
+},
 
       removeFromWatchlist(id) {
         AppState.removeFromWatchlist(id);
