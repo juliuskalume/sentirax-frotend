@@ -306,6 +306,15 @@
       margin-bottom: 1.5rem;
     }
 
+    .title-banner {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 0.7rem;
+  max-height: 220px;
+  object-fit: cover;
+  background-color: #020617;
+}
+
     .title-card {
       background: #020617;
       border-radius: 16px;
@@ -1202,33 +1211,47 @@
           ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
           : "";
         const itemsHtml = recs.map(r => {
-          const name = r.name || r.title || "Untitled";
-          const genres = (r.genres || []).slice(0, 3);
-          const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
-          const type = r.type === "show" ? "Series" : "Movie";
-          const jsonStr = encodeURIComponent(JSON.stringify(r));
-          return `
-            <div class="title-card" data-title='${jsonStr}'>
-              <div class="title-header">
-                <div class="title-main">
-                  <div class="title-name">${name}</div>
-                  <div class="badge-row">
-                    <span class="badge badge-type">${type}</span>
-                    ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-                    ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
-                    ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
-                  </div>
-                </div>
-                <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-                  ⭐
-                </button>
-              </div>
-              ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-              ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
-              ${Views.renderStreamingRowHtml(name)}
-            </div>
-          `;
-        }).join("");
+  const name = r.name || r.title || "Untitled";
+  const genres = (r.genres || []).slice(0, 3);
+  const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
+  const type = r.type === "show" ? "Series" : "Movie";
+  const jsonStr = encodeURIComponent(JSON.stringify(r));
+
+  const posterUrl = r.poster_path
+    ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
+    : null;
+
+  return `
+    <div class="title-card" data-title='${jsonStr}'>
+      ${posterUrl ? `
+        <img
+          class="title-banner"
+          src="${posterUrl}"
+          alt="${name} poster"
+          loading="lazy"
+        />
+      ` : ""}
+      <div class="title-header">
+        <div class="title-main">
+          <div class="title-name">${name}</div>
+          <div class="badge-row">
+            <span class="badge badge-type">${type}</span>
+            ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+            ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
+            ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+          </div>
+        </div>
+        <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+          ⭐
+        </button>
+      </div>
+      ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+      ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
+      ${Views.renderStreamingRowHtml(name)}
+    </div>
+  `;
+}).join("");
+
         c.innerHTML = `
           <div class="card">
             ${summaryHtml}
@@ -1287,45 +1310,59 @@
         }
       },
 
-      detail(title) {
-        const name = title.name || title.title || "Untitled";
-        const type = title.type === "show" ? "Series" : "Movie";
-        const genres = (title.genres || []).join(", ");
-        const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+     detail(title) {
+  const name = title.name || title.title || "Untitled";
+  const type = title.type === "show" ? "Series" : "Movie";
+  const genres = (title.genres || []).join(", ");
+  const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
 
-        return `
-          <div class="center-block">
-            <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
-            <div class="card" style="margin-top:1rem;">
-              <div class="section-label">Title</div>
-              <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
-              <p class="small-text" style="margin-bottom:.6rem;">
-                ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
-              </p>
-              ${title.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
-              <p class="small-text" style="margin-top:.8rem;">
-                ${title.summary || "Plot summary will appear once details load."}
-              </p>
-              ${title.reason ? `
-                <div style="margin-top:1rem;">
-                  <div class="detail-section-title">Why SentiraX picked this</div>
-                  <p class="small-text">${title.reason}</p>
-                </div>
-              ` : ""}
-              <div style="margin-top:1rem;">
-                <div class="detail-section-title">Watch it on</div>
-                ${Views.renderStreamingRowHtml(name)}
-              </div>
-              <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
-                <button class="btn btn-secondary" id="detailWatchlistBtn">
-                  ☆ Add to watchlist
-                </button>
-              </div>
-              <div id="detailMeta" style="margin-top:1rem;"></div>
-            </div>
+  // TMDB poster URL (falls back gracefully if missing)
+  const posterUrl = title.poster_path
+    ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+    : null;
+
+  return `
+    <div class="center-block">
+      <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
+      <div class="card" style="margin-top:1rem;">
+        ${posterUrl ? `
+          <img
+            class="title-banner"
+            src="${posterUrl}"
+            alt="${name} poster"
+            loading="lazy"
+          />
+        ` : ""}
+        <div class="section-label">Title</div>
+        <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
+        <p class="small-text" style="margin-bottom:.6rem;">
+          ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
+          ${title.is_adult ? ` • <span class="badge badge-18">18+</span>` : ""}
+        </p>
+        <p class="small-text" style="margin-top:.8rem;">
+          ${title.summary || "Plot summary will appear once details load."}
+        </p>
+        ${title.reason ? `
+          <div style="margin-top:1rem;">
+            <div class="detail-section-title">Why SentiraX picked this</div>
+            <p class="small-text">${title.reason}</p>
           </div>
-        `;
-      },
+        ` : ""}
+        <div style="margin-top:1rem;">
+          <div class="detail-section-title">Watch it on</div>
+          ${Views.renderStreamingRowHtml(name)}
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="detailWatchlistBtn">
+            ☆ Add to watchlist
+          </button>
+        </div>
+        <div id="detailMeta" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  `;
+}
+
 
       async initDetail(title) {
         // watchlist button setup
