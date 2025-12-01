@@ -1832,44 +1832,78 @@
       },
 
       openWikiFullscreen(title, html, url) {
-  const modal = document.getElementById("wikiFullscreen");
+  const modal   = document.getElementById("wikiFullscreen");
   const titleEl = document.getElementById("wikiFullscreenTitle");
-  const textEl = document.getElementById("wikiFullscreenText");
-  const linkEl = document.getElementById("wikiFullscreenLink");
+  const textEl  = document.getElementById("wikiFullscreenText");
+  const linkEl  = document.getElementById("wikiFullscreenLink");
 
   titleEl.textContent = title || "Wikipedia";
-  textEl.innerHTML = html;
-  linkEl.innerHTML = url
+  textEl.innerHTML    = html;
+  linkEl.innerHTML    = url
     ? `<a href="${url}" target="_blank" class="small-text">Open on Wikipedia →</a>`
     : "";
 
-  // Attach Wikipedia link interception
+  // IMPORTANT: intercept all links inside the wiki text
   Views.hijackWikipediaLinks(textEl);
 
   modal.classList.remove("hidden");
 },
+
 
 closeWikiFullscreen() {
   const modal = document.getElementById("wikiFullscreen");
   if (modal) modal.classList.add("hidden");
 },
       hijackWikipediaLinks(container) {
-  const links = container.querySelectorAll("a[href]");
+  if (!container) return;
 
-  links.forEach(link => {
-    const href = link.getAttribute("href");
+  // Avoid attaching multiple times
+  if (container._wikiHandlerAttached) return;
+  container._wikiHandlerAttached = true;
 
-    // Only intercept Wikipedia internal links
-    if (!href.includes("wikipedia.org")) return;
+  container.addEventListener("click", async (e) => {
+    const link = e.target.closest("a");
+    if (!link) return;
 
-    link.addEventListener("click", async (e) => {
-      e.preventDefault();
+    const hrefAttr = link.getAttribute("href");
+    if (!hrefAttr) return;
 
-      // Extract page title from URL
-      let pageTitle = href.substring(href.lastIndexOf("/") + 1);
-      pageTitle = decodeURIComponent(pageTitle.replace(/_/g, " "));
+    // Only handle wiki-like links (they show up as /wiki/... or https://sentirax.vercel.app/wiki/...)
+    if (!hrefAttr.includes("/wiki/")) {
+      return; // let normal external links behave as usual
+    }
 
-      // Load new Wikipedia page into modal
+    e.preventDefault();
+
+    // Resolve the URL so we can extract the /wiki/... path reliably
+    let pageTitle = null;
+    try {
+      const url = new URL(hrefAttr, window.location.origin);
+      const path = url.pathname;              // e.g. /wiki/Shawn_Levy
+      const slug = path.substring(path.lastIndexOf("/") + 1);
+      pageTitle = decodeURIComponent(slug.replace(/_/g, " "));
+    } catch {
+      // best-effort fallback
+      pageTitle = hrefAttr;
+    }
+
+    if (!pageTitle) return;
+
+    // Show a small loading state in-place
+    const textEl = document.getElementById("wikiFullscreenText");
+    const titleEl = document.getElementById("wikiFullscreenTitle");
+    const linkEl = document.getElementById("wikiFullscreenLink");
+
+    if (textEl) {
+      textEl.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p class="small-text">Loading Wikipedia page: ${pageTitle}...</p>
+        </div>
+      `;
+    }
+
+    try {
       const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1878,21 +1912,34 @@ closeWikiFullscreen() {
 
       const data = await res.json();
 
-      // Update modal with new content
-      document.getElementById("wikiFullscreenTitle").textContent =
-        data.wiki_title || pageTitle;
-
-      const textEl = document.getElementById("wikiFullscreenText");
-      textEl.innerHTML = data.html || "<p>Could not load page.</p>";
-
-      // re-attach interceptors for new content
-      Views.hijackWikipediaLinks(textEl);
-
-      if (data.url) {
-        document.getElementById("wikiFullscreenLink").innerHTML =
-          `<a href="${data.url}" target="_blank" class="small-text">Open original →</a>`;
+      if (!res.ok || !data.html) {
+        if (textEl) {
+          textEl.innerHTML = `<p class="small-text">Could not load Wikipedia page "${pageTitle}".</p>`;
+        }
+        return;
       }
-    });
+
+      if (titleEl) {
+        titleEl.textContent = data.wiki_title || pageTitle;
+      }
+
+      if (textEl) {
+        textEl.innerHTML = data.html;
+        // Re-attach handlers for the new content
+        container._wikiHandlerAttached = false; // reset flag
+        Views.hijackWikipediaLinks(textEl);
+      }
+
+      if (linkEl) {
+        linkEl.innerHTML = data.url
+          ? `<a href="${data.url}" target="_blank" class="small-text">Open original on Wikipedia →</a>`
+          : "";
+      }
+    } catch (err) {
+      if (textEl) {
+        textEl.innerHTML = `<p class="small-text">Error loading Wikipedia page: ${err.message || err}</p>`;
+      }
+    }
   });
 }
     };
@@ -1919,15 +1966,12 @@ closeWikiFullscreen() {
   
   <!-- Fullscreen Wikipedia modal -->
 <div id="wikiFullscreen" class="modal-overlay hidden">
-  <div class="modal-content" style="max-width: 720px; max-height: 90vh; overflow: hidden; display:flex; flex-direction:column;">
+  <div class="modal-content" style="max-width: 900px; width: 100%; max-height: 90vh; overflow: hidden; display:flex; flex-direction:column;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
       <h3 id="wikiFullscreenTitle" style="margin:0;font-size:1.1rem;"></h3>
-      <button class="btn-ghost" type="button" onclick="Views.closeWikiFullscreen()">✕</button>
+      <button class="btn-ghost" onclick="Views.closeWikiFullscreen()">✕</button>
     </div>
-    <div id="wikiFullscreenText"
-         class="small-text"
-         style="flex:1; overflow:auto; border:1px solid var(--border-subtle); border-radius:10px; padding:0.75rem; background:#020617;">
-    </div>
+    <div id="wikiFullscreenText" style="flex:1;overflow:auto;border:1px solid var(--border-subtle);border-radius:10px;padding:0.75rem;background:#020617;font-size:0.85rem;"></div>
     <div id="wikiFullscreenLink" style="margin-top:.5rem;"></div>
   </div>
 </div>
