@@ -923,6 +923,11 @@
     };
 
     const Views = {
+
+        // ---- Wikipedia fullscreen navigation state ----
+  _wikiHistory: [],
+  _wikiHistoryIndex: 0,
+
       welcome() {
         return `
           <div class="center-block" style="padding:2.2rem 0;">
@@ -1865,6 +1870,42 @@
           el.style.opacity = "0";
           setTimeout(() => el.remove(), 300);
         }, 1500);
+      },
+
+            // Render the current wiki-history entry into the fullscreen modal
+      renderWikiFullscreenCurrent() {
+        const entry = Views._wikiHistory[Views._wikiHistoryIndex];
+        if (!entry) return;
+
+        const titleEl = document.getElementById("wikiFullscreenTitle");
+        const textEl  = document.getElementById("wikiFullscreenText");
+
+        if (titleEl) titleEl.textContent = entry.title || "Wikipedia";
+        if (textEl) {
+          textEl.innerHTML = entry.html || "<p class='small-text'>No content available.</p>";
+          // re-attach link hijacking on the current page
+          Views.hijackWikipediaLinks(textEl);
+        }
+
+        // update nav buttons disabled state
+        const backBtn = document.getElementById("wikiNavBack");
+        const fwdBtn  = document.getElementById("wikiNavForward");
+        if (backBtn) backBtn.disabled = Views._wikiHistoryIndex <= 0;
+        if (fwdBtn)  fwdBtn.disabled  = Views._wikiHistoryIndex >= Views._wikiHistory.length - 1;
+      },
+
+      wikiGoBack() {
+        if (Views._wikiHistoryIndex > 0) {
+          Views._wikiHistoryIndex--;
+          Views.renderWikiFullscreenCurrent();
+        }
+      },
+
+      wikiGoForward() {
+        if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
+          Views._wikiHistoryIndex++;
+          Views.renderWikiFullscreenCurrent();
+        }
       },
 
       openWikiFullscreen(title, html) {
