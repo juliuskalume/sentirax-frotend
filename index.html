@@ -1976,10 +1976,13 @@ closeWikiFullscreen() {
   const modal = document.getElementById("wikiFullscreen");
   if (modal) modal.classList.add("hidden");
 },
+      
+      
+      
       hijackWikipediaLinks(container) {
   if (!container) return;
 
-  // Avoid attaching multiple times
+  // Avoid attaching multiple times to the same element
   if (container._wikiHandlerAttached) return;
   container._wikiHandlerAttached = true;
 
@@ -1990,31 +1993,29 @@ closeWikiFullscreen() {
     const hrefAttr = link.getAttribute("href");
     if (!hrefAttr) return;
 
-    // Only handle wiki-like links (they show up as /wiki/... or https://sentirax.vercel.app/wiki/...)
+    // Only intercept wiki-style links like /wiki/... or https://sentirax.vercel.app/wiki/...
     if (!hrefAttr.includes("/wiki/")) {
-      return; // let normal external links behave as usual
+      return; // let external links behave normally
     }
 
     e.preventDefault();
 
-    // Resolve the URL so we can extract the /wiki/... path reliably
+    // Figure out the page title from the URL
     let pageTitle = null;
     try {
       const url = new URL(hrefAttr, window.location.origin);
-      const path = url.pathname;              // e.g. /wiki/Shawn_Levy
+      const path = url.pathname; // e.g. /wiki/Shawn_Levy
       const slug = path.substring(path.lastIndexOf("/") + 1);
       pageTitle = decodeURIComponent(slug.replace(/_/g, " "));
     } catch {
-      // best-effort fallback
       pageTitle = hrefAttr;
     }
 
     if (!pageTitle) return;
 
-    // Show a small loading state in-place
-    const textEl = document.getElementById("wikiFullscreenText");
-    const titleEl = document.getElementById("wikiFullscreenTitle");
-    
+    // Show loading state inside the fullscreen modal
+    const textEl  = document.getElementById("wikiFullscreenText");
+
     if (textEl) {
       textEl.innerHTML = `
         <div class="loading">
@@ -2040,10 +2041,23 @@ closeWikiFullscreen() {
         return;
       }
 
-      if (titleEl) {
-        titleEl.textContent = data.wiki_title || pageTitle;
+      const newTitle = data.wiki_title || pageTitle;
+      const newHtml  = data.html || "<p class='small-text'>No content available.</p>";
+
+      // ---- update wiki navigation history ----
+      // If we had gone back, drop any "forward" pages
+      if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
+        Views._wikiHistory = Views._wikiHistory.slice(0, Views._wikiHistoryIndex + 1);
       }
 
+      Views._wikiHistory.push({
+        title: newTitle,
+        html:  newHtml
+      });
+      Views._wikiHistoryIndex = Views._wikiHistory.length - 1;
+
+      // Render the new current page (this also re-hijacks links + updates buttons)
+      Views.renderWikiFullscreenCurrent();
     } catch (err) {
       if (textEl) {
         textEl.innerHTML = `<p class="small-text">Error loading Wikipedia page: ${err.message || err}</p>`;
@@ -2051,6 +2065,7 @@ closeWikiFullscreen() {
     }
   });
 }
+
     };
 
     document.addEventListener("DOMContentLoaded", () => {
