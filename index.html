@@ -307,13 +307,14 @@
     }
 
     .title-banner {
-      width: 100%;
-      border-radius: 12px;
-      margin-bottom: 0.7rem;
-      max-height: 220px;
-      object-fit: cover;
-      background-color: #020617;
-    }
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 0.7rem;
+  height: auto;              /* let the height follow the image */
+  max-height: none;          /* or remove this line entirely */
+  object-fit: contain;       /* show the whole poster, no cropping */
+  background-color: #020617; /* gives letterbox bars if needed */
+}
 
     .title-card {
       background: #020617;
