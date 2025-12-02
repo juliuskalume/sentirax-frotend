@@ -1,0 +1,23 @@
+{
+  "name": "SentiraX – Mood-Based Watch Companion",
+  "short_name": "SentiraX",
+  "description": "AI-powered mood-based movie & show companion based on how you feel.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
