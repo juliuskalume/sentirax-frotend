@@ -238,6 +238,35 @@
       min-height: 90px;
     }
 
+    .install-btn {
+  padding: 0.7rem 1.4rem;
+  border: 1px solid var(--border-subtle);
+  background: #020617;
+  color: var(--text-main);
+  border-radius: 999px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all .2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: auto;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  margin-top: .4rem;
+}
+
+.install-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(34,197,94,0.35);
+}
+
+.install-btn.hidden {
+  display: none !important;
+}
+
     .mood-slider {
       -webkit-appearance: none;
       appearance: none;
@@ -732,6 +761,11 @@
               Your mood-based watching companion.
             </p>
           </div>
+          <!-- ⭐ INSTALL PWA BUTTON (initially hidden) -->
+    <button id="installPwaBtn" class="install-btn hidden">
+      📲 Install SentiraX
+    </button>
+
           <nav class="footer-nav">
             <div class="footer-column">
               <h3>Product</h3>
@@ -2060,7 +2094,7 @@ closeWikiFullscreen() {
       Router.navigate(AppState.currentView);
     });
 
-    // PWA service worker (optional if you have one)
+    // PWA service worker
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker
@@ -2068,6 +2102,35 @@ closeWikiFullscreen() {
           .catch(() => {});
       });
     }
+
+    let deferredInstallPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+
+  const btn = document.getElementById("installPwaBtn");
+  if (btn) btn.classList.remove("hidden");
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("installPwaBtn");
+  if (!btn) return;
+
+  btn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+
+    deferredInstallPrompt.prompt();
+    const outcome = await deferredInstallPrompt.userChoice;
+
+    // hide after choice
+    if (outcome.outcome) {
+      btn.classList.add("hidden");
+    }
+    deferredInstallPrompt = null;
+  });
+});
+
   </script>
   
   <!-- Fullscreen Wikipedia modal -->
