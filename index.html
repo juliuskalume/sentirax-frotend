@@ -1359,9 +1359,8 @@
       </button>
     </div>
     ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-    ${r.reason ? `<p class="reason-text">Why SentiraX picked this: ${r.reason}</p>` : ""}
-    ${Views.renderStreamingRowHtml(name)}
-  </div>
+    ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
+</div>
 `;
 
   }).join("");
@@ -1394,18 +1393,6 @@
     });
   });
 },
-
-      renderStreamingRowHtml(title) {
-        const q = encodeURIComponent(title);
-        return `
-          <div class="stream-row">
-            <a class="stream-btn" href="https://www.netflix.com/search?q=${q}" target="_blank" rel="noopener noreferrer">Netflix</a>
-            <a class="stream-btn" href="https://www.primevideo.com/search?phrase=${q}" target="_blank" rel="noopener noreferrer">Prime Video</a>
-            <a class="stream-btn" href="https://www.disneyplus.com/search/${q}" target="_blank" rel="noopener noreferrer">Disney+</a>
-            <a class="stream-btn" href="https://www.justwatch.com/search?q=${q}" target="_blank" rel="noopener noreferrer">JustWatch</a>
-          </div>
-        `;
-      },
 
       refreshRecommendations() {
   AppState.recommendations = [];
@@ -1461,14 +1448,10 @@
         </p>
         ${title.reason ? `
           <div style="margin-top:1rem;">
-            <div class="detail-section-title">Why SentiraX picked this</div>
+            <div class="detail-section-title"><b>Why SentiraX picked this</b></div>
             <p class="small-text">${title.reason}</p>
           </div>
         ` : ""}
-        <div style="margin-top:1rem;">
-          <div class="detail-section-title">Watch it on</div>
-          ${Views.renderStreamingRowHtml(name)}
-        </div>
         <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
           <button class="btn btn-secondary" id="detailWatchlistBtn">
             ☆ Add to watchlist
@@ -1688,9 +1671,9 @@
       <div class="detail-section-title">Where TMDB says it’s available</div>
       <div class="providers-groups">${groupBlocks}</div>
       <p class="small-text" style="margin-top:.4rem;">
-        Availability is region-dependent and can change. Use the watch buttons above to double-check.
-      </p>
-    `;
+  Availability is region-dependent and can change. Check directly in your preferred streaming app to confirm.
+</p>
+`;
   }
 
   container.innerHTML = `
@@ -1755,8 +1738,7 @@
         </button>
       </div>
       ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-      ${Views.renderStreamingRowHtml(name)}
-    </div>
+</div>
   `;
 }).join("");
         
