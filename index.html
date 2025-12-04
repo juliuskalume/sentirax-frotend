@@ -1750,13 +1750,19 @@ container.innerHTML = `
 
       renderWatchOnLinks(titleName) {
   const services = [
-    "Netflix",
-    "Prime Video",
-    "Disney+",
-    "Apple TV+",
-    "Hulu",
-    "Max"
-  ];
+  "Netflix",
+  "Prime Video",
+  "Disney+",
+  "Apple TV+",
+  "Hulu",
+  "Max",
+  "YouTube",
+  "Crunchyroll",
+  "Peacock",
+  "Paramount+",
+  "Tubi"
+];
+
 
   const links = services.map(service => {
     const url = Views.buildWatchRedirectUrl(service, titleName);
