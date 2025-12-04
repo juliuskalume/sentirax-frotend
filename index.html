@@ -1701,19 +1701,23 @@
   }).filter(Boolean).join("");
 
   if (groupBlocks) {
-    providersHtml = `
-      <div class="detail-section-title">Where TMDB says it’s available</div>
-      <div class="providers-groups">${groupBlocks}</div>
-      <p class="small-text" style="margin-top:.4rem;">
-  Availability is region-dependent and can change. Check directly in your preferred streaming app to confirm.
-</p>
-`;
-  }
-
-  container.innerHTML = `
-    ${castHtml}
-    ${providersHtml}
+  providersHtml = `
+    <div class="detail-section-title">Where TMDB says it’s available</div>
+    <div class="providers-groups">${groupBlocks}</div>
+    <p class="small-text" style="margin-top:.4rem;">
+      Availability is region-dependent and can change. Check directly in your preferred streaming app to confirm.
+    </p>
   `;
+}
+
+// NEW: always show WATCH ON if we have a title
+const watchOnHtml = titleName ? Views.renderWatchOnLinks(titleName) : "";
+
+container.innerHTML = `
+  ${castHtml}
+  ${providersHtml}
+  ${watchOnHtml}
+`;
 },
       buildProviderUrl(providerName, title) {
   const q = encodeURIComponent(`${title} ${providerName} watch`);
@@ -1738,6 +1742,44 @@
   // Fallback: Google search for "<title> <provider> watch"
   return `https://www.google.com/search?q=${q}`;
 },
+      buildWatchRedirectUrl(serviceName, title) {
+  const encodedService = encodeURIComponent(serviceName);
+  const encodedTitle = encodeURIComponent(title);
+  return `${BACKEND_BASE_URL}/watch?service=${encodedService}&title=${encodedTitle}`;
+},
+
+      renderWatchOnLinks(titleName) {
+  const services = [
+    "Netflix",
+    "Prime Video",
+    "Disney+",
+    "Apple TV+",
+    "Hulu",
+    "Max"
+  ];
+
+  const links = services.map(service => {
+    const url = Views.buildWatchRedirectUrl(service, titleName);
+    return `
+      <a
+        class="stream-btn"
+        href="${url}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ${service}
+      </a>
+    `;
+  }).join("");
+
+  return `
+    <div class="detail-section-title" style="margin-top:.9rem;">Watch on</div>
+    <div class="stream-row">
+      ${links}
+    </div>
+  `;
+},
+
 
       watchlist() {
         const list = AppState.watchlist;
