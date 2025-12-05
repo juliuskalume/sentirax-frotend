@@ -1745,10 +1745,10 @@ container.innerHTML = `
       
       
       buildServiceSearchUrl(serviceName, title) {
-  const name = serviceName.toLowerCase();
-  const encodedTitle = encodeURIComponent(title);
+        
   const lower = serviceName.toLowerCase();
-
+  const encodedTitle = encodeURIComponent(title);
+        
   if (lower.includes("tubi")) {
     url = `https://tubitv.com/search/${encodedTitle}`;
 } else if (lower.includes("pluto")) {
@@ -1757,7 +1757,7 @@ container.innerHTML = `
     url = `https://www.crackle.com/search?query=${encodedTitle}`;
 } else if (lower.includes("roku")) {
     url = `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
-} else if (name.includes("freevee")) {
+} else if (lower.includes("freevee")) {
     url = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
 } else if (lower.includes("uflix")) {
     url = `https://uflix.cc/search?keyword=${encodedTitle}`;
