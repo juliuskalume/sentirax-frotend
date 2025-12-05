@@ -1748,6 +1748,7 @@ container.innerHTML = `
         
   const lower = serviceName.toLowerCase();
   const encodedTitle = encodeURIComponent(title);
+  const slugTitle = title.trim().replace(/\s+/g, "-");
         
   if (lower.includes("tubi")) {
     return `https://tubitv.com/search/${encodedTitle}`;
@@ -1766,7 +1767,7 @@ container.innerHTML = `
 } else if (lower.includes("netmirror")) {
     return `https://www.google.com/search?q=NetMirror+App`;
 } else if (lower.includes("cineb")) {
-    return `https://cineb.gg/search/${encodedTitle}`;
+    return `https://cineb.gg/search/${slugTitle}`;
 }else if (lower.includes("lookmovie")) {
     return `https://www.google.com/search?q=LookMovie`;
 } else if (lower.includes("fmovies")) {
