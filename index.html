@@ -1750,31 +1750,31 @@ container.innerHTML = `
   const encodedTitle = encodeURIComponent(title);
         
   if (lower.includes("tubi")) {
-    url = `https://tubitv.com/search/${encodedTitle}`;
+    return = `https://tubitv.com/search/${encodedTitle}`;
 } else if (lower.includes("pluto")) {
-    url = `https://pluto.tv/us/search?query=${encodedTitle}`;
-} else if (lower.includes("crakle")) {
-    url = `https://www.crackle.com/search?query=${encodedTitle}`;
+    return = `https://pluto.tv/us/search?query=${encodedTitle}`;
+} else if (lower.includes("crackle")) {
+    return = `https://www.crackle.com/search?query=${encodedTitle}`;
 } else if (lower.includes("roku")) {
-    url = `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
+    return = `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
 } else if (lower.includes("freevee")) {
-    url = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
+    return = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
 } else if (lower.includes("uflix")) {
-    url = `https://uflix.cc/search?keyword=${encodedTitle}`;
+    return = `https://uflix.cc/search?keyword=${encodedTitle}`;
 } else if (lower.includes("soap2day")) {
-    url = `https://ww25.soap2day.day/?s=${encodedTitle}`;
+    return = `https://ww25.soap2day.day/?s=${encodedTitle}`;
 } else if (lower.includes("netmirror")) {
-    url = `https://www.google.com/search?q=NetMirror+App`;
+    return = `https://www.google.com/search?q=NetMirror+App`;
 } else if (lower.includes("cineb")) {
-    url = `https://cineb.gg/search/${encodedTitle}`;
+    return = `https://cineb.gg/search/${encodedTitle}`;
 } else if (lower.includes("fmovies")) {
-    url = `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+    return = `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
 } else if (lower.includes("123movies")) {
-    url = `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+    return = `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
 } else if (lower.includes("yesmovies")) {
-    url = `https://moviejabber.org/search/?s=${encodedTitle}`;
+    return = `https://moviejabber.org/search/?s=${encodedTitle}`;
 } else if (lower.includes("flixtor")) {
-    url = `https://flixtor.studio/?s=${encodedTitle}`;
+    return = `https://flixtor.studio/?s=${encodedTitle}`;
 }
 
   // Unknown service → Google fallback
@@ -1787,8 +1787,8 @@ container.innerHTML = `
   const services = [
   "Tubi",
   "Pluto TV",
-  "Crakle",
-  "Roku Chanel",
+  "Crackle",
+  "Roku Channel",
   "Freevee",
   "Uflix",
   "Soap2Day",
