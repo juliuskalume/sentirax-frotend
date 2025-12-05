@@ -1747,6 +1747,7 @@ container.innerHTML = `
       buildServiceSearchUrl(serviceName, title) {
   const name = serviceName.toLowerCase();
   const encodedTitle = encodeURIComponent(title);
+  const lower = serviceName.toLowerCase();
 
   if (lower.includes("tubi")) {
     url = `https://tubitv.com/search/${encodedTitle}`;
