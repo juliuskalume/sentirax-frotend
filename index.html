@@ -1722,7 +1722,7 @@ container.innerHTML = `
       buildProviderUrl(providerName, title) {
   const q = encodeURIComponent(`${title} ${providerName} watch`);
   const name = providerName.toLowerCase();
-
+        
   if (name.includes("netflix")) {
     return `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
   }
@@ -1742,10 +1742,44 @@ container.innerHTML = `
   // Fallback: Google search for "<title> <provider> watch"
   return `https://www.google.com/search?q=${q}`;
 },
-      buildWatchRedirectUrl(serviceName, title) {
-  const encodedService = encodeURIComponent(serviceName);
+      
+      
+      buildServiceSearchUrl(serviceName, title) {
+  const name = serviceName.toLowerCase();
   const encodedTitle = encodeURIComponent(title);
-  return `${BACKEND_BASE_URL}/watch?service=${encodedService}&title=${encodedTitle}`;
+
+  if (lower.includes("tubi")) {
+    url = `https://tubitv.com/search/${encodedTitle}`;
+} else if (lower.includes("pluto")) {
+    url = `https://pluto.tv/us/search?query=${encodedTitle}`;
+} else if (lower.includes("crakle")) {
+    url = `https://www.crackle.com/search?query=${encodedTitle}`;
+} else if (lower.includes("roku")) {
+    url = `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
+} else if (name.includes("freevee")) {
+    url = `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
+} else if (lower.includes("uflix")) {
+    url = `https://uflix.cc/search?keyword=${encodedTitle}`;
+} else if (lower.includes("soap2day")) {
+    url = `https://ww25.soap2day.day/?s=${encodedTitle}`;
+} else if (lower.includes("netmirror")) {
+    url = `https://www.google.com/search?q=NetMirror+App`;
+} else if (lower.includes("cineb")) {
+    url = `https://cineb.gg/search/${encodedTitle}`;
+} else if (lower.includes("fmovies")) {
+    url = `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("123movies")) {
+    url = `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+} else if (lower.includes("yesmovies")) {
+    url = `https://moviejabber.org/search/?s=${encodedTitle}`;
+} else if (lower.includes("flixtor")) {
+    url = `https://flixtor.studio/?s=${encodedTitle}`;
+}
+
+  // Unknown service → Google fallback
+  return `https://www.google.com/search?q=${encodeURIComponent(
+    `${title} on ${serviceName}`
+  )}`;
 },
 
       renderWatchOnLinks(titleName) {
@@ -1767,8 +1801,8 @@ container.innerHTML = `
 ];
 
 
-  const links = services.map(service => {
-    const url = Views.buildWatchRedirectUrl(service, titleName);
+    const links = services.map(service => {
+    const url = Views.buildServiceSearchUrl(service, titleName);
     return `
       <a
         class="stream-btn"
@@ -1782,7 +1816,7 @@ container.innerHTML = `
   }).join("");
 
   return `
-    <div class="detail-section-title" style="margin-top:.9rem;">Search on</div>
+    <div class="detail-section-title" style="margin-top:.9rem;">Watch on</div>
     <div class="stream-row">
       ${links}
     </div>
