@@ -2259,70 +2259,64 @@
   });
     
     //===COOKIES===
-    (function () {
-  const CONSENT_KEY = "sentirax_cookie_consent";
+    document.addEventListener("DOMContentLoaded", function () {
+    const CONSENT_KEY = "sentirax_cookie_consent";
 
-  const banner = document.getElementById("cookie-banner");
-  const acceptBtn = document.getElementById("cookie-accept-btn");
-  const rejectBtn = document.getElementById("cookie-reject-btn");
-  const settingsBtn = document.getElementById("cookie-settings-btn");
+    const banner = document.getElementById("cookie-banner");
+    const acceptBtn = document.getElementById("cookie-accept-btn");
+    const rejectBtn = document.getElementById("cookie-reject-btn");
+    const settingsBtn = document.getElementById("cookie-settings-btn");
 
-  const modal = document.getElementById("cookie-modal");
-  const saveBtn = document.getElementById("cookie-save-btn");
-  const cancelBtn = document.getElementById("cookie-cancel-btn");
+    const modal = document.getElementById("cookie-modal");
+    const saveBtn = document.getElementById("cookie-save-btn");
+    const cancelBtn = document.getElementById("cookie-cancel-btn");
 
-  const analyticsBox = document.getElementById("analyticsCookies");
-  const adsBox = document.getElementById("adCookies");
+    const analyticsBox = document.getElementById("analyticsCookies");
+    const adsBox = document.getElementById("adCookies");
 
-  const saved = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
+    const saved = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
 
-  // show banner if no prior choice
-  if (!saved.choice) {
-    banner.classList.remove("hidden");
-  }
+    if (!saved.choice) {
+      banner.classList.remove("hidden");
+    }
 
-  // ACCEPT ALL
-  acceptBtn.addEventListener("click", () => {
-    localStorage.setItem(CONSENT_KEY, JSON.stringify({
-      choice: "accepted",
-      analytics: true,
-      ads: true
-    }));
-    banner.classList.add("hidden");
-  });
+    acceptBtn.addEventListener("click", () => {
+      localStorage.setItem(CONSENT_KEY, JSON.stringify({
+        choice: "accepted",
+        analytics: true,
+        ads: true
+      }));
+      banner.classList.add("hidden");
+    });
 
-  // REJECT ALL
-  rejectBtn.addEventListener("click", () => {
-    localStorage.setItem(CONSENT_KEY, JSON.stringify({
-      choice: "rejected",
-      analytics: false,
-      ads: false
-    }));
-    banner.classList.add("hidden");
-  });
+    rejectBtn.addEventListener("click", () => {
+      localStorage.setItem(CONSENT_KEY, JSON.stringify({
+        choice: "rejected",
+        analytics: false,
+        ads: false
+      }));
+      banner.classList.add("hidden");
+    });
 
-  // OPEN SETTINGS
-  settingsBtn.addEventListener("click", () => {
-    analyticsBox.checked = !!saved.analytics;
-    adsBox.checked = !!saved.ads;
-    modal.classList.remove("hidden");
-  });
+    settingsBtn.addEventListener("click", () => {
+      analyticsBox.checked = !!saved.analytics;
+      adsBox.checked = !!saved.ads;
+      modal.classList.remove("hidden");
+    });
 
-  // SAVE SETTINGS
-  saveBtn.addEventListener("click", () => {
-    localStorage.setItem(CONSENT_KEY, JSON.stringify({
-      choice: "custom",
-      analytics: analyticsBox.checked,
-      ads: adsBox.checked
-    }));
-    modal.classList.add("hidden");
-  });
+    saveBtn.addEventListener("click", () => {
+      localStorage.setItem(CONSENT_KEY, JSON.stringify({
+        choice: "custom",
+        analytics: analyticsBox.checked,
+        ads: adsBox.checked
+      }));
+      modal.classList.add("hidden");
+    });
 
-  // CANCEL SETTINGS
-  cancelBtn.addEventListener("click", () => {
-    modal.classList.add("hidden");
-  });
-})();
+    cancelBtn.addEventListener("click", () => {
+      modal.classList.add("hidden");
+    });
+});
 
     
 </script>
