@@ -1398,11 +1398,12 @@
       }).join("");
 
       c.innerHTML = `
-        <div class="card">
-          ${summaryHtml}
-          ${itemsHtml}
-        </div>
-      ";
+  <div class="card">
+    ${summaryHtml}
+    ${itemsHtml}
+  </div>
+`;
+
 
       // detail navigation
       c.querySelectorAll(".title-card").forEach(card => {
