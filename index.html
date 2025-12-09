@@ -817,546 +817,556 @@
   </div>
 
   <script>
-    // Footer year
-    document.addEventListener("DOMContentLoaded", () => {
-      const yearEl = document.getElementById("year");
-      if (yearEl) yearEl.textContent = new Date().getFullYear();
-    });
+  // Footer year
+  document.addEventListener("DOMContentLoaded", () => {
+    const yearEl = document.getElementById("year");
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+  });
 
-    // Backend URL for SentiraX
-    const BACKEND_BASE_URL = "https://sentirax-backend.onrender.com";
+  // Backend URL for SentiraX
+  const BACKEND_BASE_URL = "https://sentirax-backend.onrender.com";
 
-    // Simple storage wrapper
-    const Storage = {
-      get(key, fallback = null) {
-        try {
-          const raw = localStorage.getItem("sentirax_" + key);
-          if (!raw) return fallback;
-          return JSON.parse(raw);
-        } catch {
-          return fallback;
-        }
-      },
-      set(key, value) {
-        try {
-          localStorage.setItem("sentirax_" + key, JSON.stringify(value));
-        } catch {}
-      },
-      remove(key) {
-        try { localStorage.removeItem("sentirax_" + key); } catch {}
-      },
-      clearAll() {
-        ["user_profile", "watchlist", "checkins"].forEach(k => Storage.remove(k));
+  // Simple storage wrapper
+  const Storage = {
+    get(key, fallback = null) {
+      try {
+        const raw = localStorage.getItem("sentirax_" + key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+      } catch {
+        return fallback;
       }
-    };
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem("sentirax_" + key, JSON.stringify(value));
+      } catch {}
+    },
+    remove(key) {
+      try {
+        localStorage.removeItem("sentirax_" + key);
+      } catch {}
+    },
+    clearAll() {
+      ["user_profile", "watchlist", "checkins"].forEach(k => Storage.remove(k));
+    }
+  };
 
-    const AppState = {
-      user: null,
-      watchlist: [],
-      checkins: [],
-      currentView: "welcome",
-      lastCheckIn: null,
-      recommendations: [],
-      lastSummary: "",
-      selectedTitle: null,
-      detailsCache: {},
+  const AppState = {
+    user: null,
+    watchlist: [],
+    checkins: [],
+    currentView: "welcome",
+    lastCheckIn: null,
+    recommendations: [],
+    lastSummary: "",
+    selectedTitle: null,
+    detailsCache: {},
 
-      init() {
-        this.user = Storage.get("user_profile", null);
-        this.watchlist = Storage.get("watchlist", []);
-        this.checkins = Storage.get("checkins", []);
-        if (this.user) this.currentView = "check-in";
-      },
+    init() {
+      this.user = Storage.get("user_profile", null);
+      this.watchlist = Storage.get("watchlist", []);
+      this.checkins = Storage.get("checkins", []);
+      if (this.user) this.currentView = "check-in";
+    },
 
-      saveUser(profile) {
-        this.user = profile;
-        Storage.set("user_profile", profile);
-      },
+    saveUser(profile) {
+      this.user = profile;
+      Storage.set("user_profile", profile);
+    },
 
-      saveCheckIn(checkIn) {
-        this.lastCheckIn = checkIn;
-        this.checkins.push({ ...checkIn, ts: new Date().toISOString() });
-        Storage.set("checkins", this.checkins);
-      },
+    saveCheckIn(checkIn) {
+      this.lastCheckIn = checkIn;
+      this.checkins.push({ ...checkIn, ts: new Date().toISOString() });
+      Storage.set("checkins", this.checkins);
+    },
 
-      addToWatchlist(item) {
-        if (!this.watchlist.find(x => x.id === item.id)) {
-          this.watchlist.push(item);
-          Storage.set("watchlist", this.watchlist);
-        }
-      },
-
-      removeFromWatchlist(id) {
-        this.watchlist = this.watchlist.filter(x => x.id !== id);
+    addToWatchlist(item) {
+      if (!this.watchlist.find(x => x.id === item.id)) {
+        this.watchlist.push(item);
         Storage.set("watchlist", this.watchlist);
-      },
-
-      reset() {
-        this.user = null;
-        this.watchlist = [];
-        this.checkins = [];
-        this.currentView = "welcome";
-        this.recommendations = [];
-        this.selectedTitle = null;
-        this.detailsCache = {};
-        Storage.clearAll();
       }
-    };
+    },
 
-    const Router = {
-      navigate(view, data = {}) {
-        AppState.currentView = view;
-        const navBar = document.getElementById("navBar");
-        if (["welcome", "onboarding"].includes(view)) {
-          navBar.style.display = "none";
-        } else {
-          navBar.style.display = "flex";
-        }
+    removeFromWatchlist(id) {
+      this.watchlist = this.watchlist.filter(x => x.id !== id);
+      Storage.set("watchlist", this.watchlist);
+    },
 
-        document.querySelectorAll(".nav-item").forEach(item => {
-          item.classList.toggle("active", item.dataset.view === view);
-        });
+    reset() {
+      this.user = null;
+      this.watchlist = [];
+      this.checkins = [];
+      this.currentView = "welcome";
+      this.recommendations = [];
+      this.selectedTitle = null;
+      this.detailsCache = {};
+      Storage.clearAll();
+    }
+  };
 
-        this.render(view, data);
-      },
-
-      render(view, data) {
-        const main = document.getElementById("mainContent");
-        switch (view) {
-          case "welcome":
-            main.innerHTML = Views.welcome();
-            break;
-          case "onboarding":
-            main.innerHTML = Views.onboarding();
-            Views.initOnboarding();
-            break;
-          case "check-in":
-            main.innerHTML = Views.checkIn();
-            Views.initCheckIn();
-            break;
-          case "recommendations":
-            main.innerHTML = Views.recommendations();
-            Views.initRecommendations();
-            break;
-          case "detail":
-            main.innerHTML = Views.detail(data.title);
-            Views.initDetail(data.title);
-            break;
-          case "watchlist":
-            main.innerHTML = Views.watchlist();
-            Views.initWatchlist();
-            break;
-          case "settings":
-            main.innerHTML = Views.settings();
-            break;
-          default:
-            main.innerHTML = "<p>View not found</p>";
-        }
-        window.scrollTo(0, 0);
+  const Router = {
+    navigate(view, data = {}) {
+      AppState.currentView = view;
+      const navBar = document.getElementById("navBar");
+      if (["welcome", "onboarding"].includes(view)) {
+        navBar.style.display = "none";
+      } else {
+        navBar.style.display = "flex";
       }
-    };
 
-    const Views = {
+      document.querySelectorAll(".nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.view === view);
+      });
 
-        // ---- Wikipedia fullscreen navigation state ----
-  _wikiHistory: [],
-  _wikiHistoryIndex: 0,
+      this.render(view, data);
+    },
 
-      welcome() {
-        return `
-          <div class="center-block" style="padding:2.2rem 0;">
-            <div style="font-size:3.4rem; margin-bottom:1rem; text-align:center; animation:fadeInUp .5s ease;">
-              🍿
-            </div>
-            <h1 class="responsive-heading" style="text-align:center; margin-bottom:0.8rem; animation:fadeInUp .5s ease .05s; animation-fill-mode:both;">
-              Welcome to SentiraX
-            </h1>
-            <p style="text-align:center; color:var(--text-muted); margin-bottom:1.7rem; animation:fadeInUp .5s ease .1s; animation-fill-mode:both;">
-              Mood-aware movie and show picks, tuned to what you feel like right now; not just what’s trending.
-            </p>
-            <div class="card" style="margin-bottom:1.8rem; animation:fadeInUp .5s ease .15s; animation-fill-mode:both;">
-              <div class="section-label">Note</div>
-              <p class="small-text">
-                SentiraX suggests entertainment based on your mood and preferences. It’s not a mental health tool and does not replace professional help. 
-                If you’re in crisis or struggling heavily, please reach out to a qualified professional or local emergency service.
-              </p>
-            </div>
-            <div style="text-align:center; animation:fadeInUp .5s ease .2s; animation-fill-mode:both;">
-              <button class="btn btn-primary" onclick="Router.navigate('onboarding')">
-                Get Started
-              </button>
-            </div>
+    render(view, data) {
+      const main = document.getElementById("mainContent");
+      switch (view) {
+        case "welcome":
+          main.innerHTML = Views.welcome();
+          break;
+        case "onboarding":
+          main.innerHTML = Views.onboarding();
+          Views.initOnboarding();
+          break;
+        case "check-in":
+          main.innerHTML = Views.checkIn();
+          Views.initCheckIn();
+          break;
+        case "recommendations":
+          main.innerHTML = Views.recommendations();
+          Views.initRecommendations();
+          break;
+        case "detail":
+          main.innerHTML = Views.detail(data.title);
+          Views.initDetail(data.title);
+          break;
+        case "watchlist":
+          main.innerHTML = Views.watchlist();
+          Views.initWatchlist();
+          break;
+        case "settings":
+          main.innerHTML = Views.settings();
+          break;
+        default:
+          main.innerHTML = "<p>View not found</p>";
+      }
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const Views = {
+    // ---- Wikipedia fullscreen navigation state ----
+    _wikiHistory: [],
+    _wikiHistoryIndex: 0,
+
+    welcome() {
+      return `
+        <div class="center-block" style="padding:2.2rem 0;">
+          <div style="font-size:3.4rem; margin-bottom:1rem; text-align:center; animation:fadeInUp .5s ease;">
+            🍿
           </div>
-        `;
-      },
-
-      onboarding() {
-        return `
-          <div class="center-block">
-            <h2 class="responsive-heading" style="margin-bottom:1.2rem;">Let’s set your baseline</h2>
-            <p class="small-text" style="margin-bottom:1.5rem;">
-              Age is required so we can safely handle 18+ content. Everything else just helps SentiraX learn your taste.
+          <h1 class="responsive-heading" style="text-align:center; margin-bottom:0.8rem; animation:fadeInUp .5s ease .05s; animation-fill-mode:both;">
+            Welcome to SentiraX
+          </h1>
+          <p style="text-align:center; color:var(--text-muted); margin-bottom:1.7rem; animation:fadeInUp .5s ease .1s; animation-fill-mode:both;">
+            Mood-aware movie and show picks, tuned to what you feel like right now; not just what’s trending.
+          </p>
+          <div class="card" style="margin-bottom:1.8rem; animation:fadeInUp .5s ease .15s; animation-fill-mode:both;">
+            <div class="section-label">Note</div>
+            <p class="small-text">
+              SentiraX suggests entertainment based on your mood and preferences. It’s not a mental health tool and does not replace professional help. 
+              If you’re in crisis or struggling heavily, please reach out to a qualified professional or local emergency service.
             </p>
-            <div class="card">
-              <div class="form-group">
-                <label class="form-label">Age <span style="color:var(--danger);">*</span></label>
-                <input type="number" id="ageInput" min="13" max="120" class="form-input" placeholder="21">
-                <div id="ageError" class="error-text hidden">Please enter a valid age (13+).</div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Gender (optional)</label>
-                <select id="genderInput" class="form-select">
-                  <option value="">Prefer not to say</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="non-binary">Non-binary</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Genres you enjoy (optional)</label>
-                <div id="likedGenres" class="mood-tags"></div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Genres to avoid (optional)</label>
-                <div id="dislikedGenres" class="mood-tags"></div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Your usual goals (optional)</label>
-                <div id="goals" class="mood-tags"></div>
-              </div>
-              <div class="form-group" style="display:flex;align-items:center;gap:.5rem;">
-                <input type="checkbox" id="allowAdult" style="accent-color:#22c55e; width:18px; height:18px;">
-                <label for="allowAdult" class="form-label" style="margin-bottom:0;">Allow 18+ content (adult films)</label>
-              </div>
-              <p class="small-text">
-                18+ content is only considered if your age is 18+ and this toggle is on.
-              </p>
-              <div style="margin-top:1.3rem; display:flex; gap:.6rem; flex-wrap:wrap;">
-                <button class="btn btn-primary" onclick="Views.saveOnboarding()">Save & continue</button>
-              </div>
-            </div>
           </div>
-        `;
-      },
-
-      initOnboarding() {
-        const likedGenres = [
-          "Action","Comedy","Drama","Romance","Horror",
-          "Thriller","Sci-Fi","Fantasy","Anime","Documentary",
-          "Crime","Mystery","Adventure"
-        ];
-        const goals = [
-          "Escape and relax","Laugh","Get inspired","Learn something",
-          "Background noise","Watch with friends","Date night"
-        ];
-        function renderChips(containerId, values) {
-          const el = document.getElementById(containerId);
-          el.innerHTML = "";
-          values.forEach(v => {
-            const div = document.createElement("div");
-            div.className = "mood-tag";
-            div.dataset.value = v;
-            div.textContent = v;
-            div.onclick = () => div.classList.toggle("selected");
-            el.appendChild(div);
-          });
-        }
-        renderChips("likedGenres", likedGenres);
-        renderChips("dislikedGenres", likedGenres);
-        renderChips("goals", goals);
-
-        const stored = AppState.user;
-        const ageInput = document.getElementById("ageInput");
-        if (stored) {
-          ageInput.value = stored.age || "";
-          document.getElementById("genderInput").value = stored.gender || "";
-          if (stored.liked_genres) {
-            stored.liked_genres.forEach(g => {
-              const chip = document.querySelector(`#likedGenres .mood-tag[data-value="${g}"]`);
-              if (chip) chip.classList.add("selected");
-            });
-          }
-          if (stored.disliked_genres) {
-            stored.disliked_genres.forEach(g => {
-              const chip = document.querySelector(`#dislikedGenres .mood-tag[data-value="${g}"]`);
-              if (chip) chip.classList.add("selected");
-            });
-          }
-          if (stored.goals) {
-            stored.goals.forEach(g => {
-              const chip = document.querySelector(`#goals .mood-tag[data-value="${g}"]`);
-              if (chip) chip.classList.add("selected");
-            });
-          }
-          if (stored.allow_adult) {
-            document.getElementById("allowAdult").checked = true;
-          }
-        }
-
-        ageInput.addEventListener("input", () => {
-          const v = Number(ageInput.value || 0);
-          const allow = document.getElementById("allowAdult");
-          if (v < 18) {
-            allow.checked = false;
-            allow.disabled = true;
-          } else {
-            allow.disabled = false;
-          }
-        });
-
-        if (stored?.age) {
-          ageInput.dispatchEvent(new Event("input"));
-        }
-      },
-
-      saveOnboarding() {
-        const ageEl = document.getElementById("ageInput");
-        const age = Number(ageEl.value || 0);
-        const err = document.getElementById("ageError");
-        if (!age || age < 13 || age > 120) {
-          err.classList.remove("hidden");
-          return;
-        }
-        err.classList.add("hidden");
-        function getSelected(containerId) {
-          return Array.from(document.querySelectorAll(`#${containerId} .mood-tag.selected`))
-            .map(x => x.dataset.value);
-        }
-        const gender = document.getElementById("genderInput").value || null;
-        const profile = {
-          age,
-          gender,
-          liked_genres: getSelected("likedGenres"),
-          disliked_genres: getSelected("dislikedGenres"),
-          goals: getSelected("goals"),
-          allow_adult: age >= 18 && document.getElementById("allowAdult").checked
-        };
-        AppState.saveUser(profile);
-        Router.navigate("check-in");
-      },
-
-      checkIn() {
-        return `
-          <div class="center-block">
-            <h2 class="responsive-heading" style="margin-bottom:1rem;">How are you feeling today?</h2>
-            <p class="small-text" style="margin-bottom:1.8rem;">
-              Tell SentiraX how you feel right now.
-            </p>
-            <div class="card">
-              <div class="form-group">
-                <label class="form-label">Mood intensity</label>
-                <input type="range" id="moodSlider" class="mood-slider" min="1" max="10" value="5" aria-describedby="moodLabel">
-                <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.78rem;color:var(--text-muted);">
-                  <span>Low energy</span>
-                  <span id="moodLabel">Neutral (5)</span>
-                  <span>High energy</span>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Mood tags (optional)</label>
-                <div id="moodTags" class="mood-tags"></div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">What are you in the mood for? (optional)</label>
-                <textarea id="freeText" class="form-textarea" placeholder="e.g. cozy romcom, no heavy drama, can be a series"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Type</label>
-                <select id="typeFilter" class="form-select">
-                  <option value="any">Movies or shows</option>
-                  <option value="movie">Movies only</option>
-                  <option value="show">Shows only</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Max duration (minutes, optional)</label>
-                <input type="number" id="maxDuration" class="form-input" min="10" max="300" placeholder="120">
-              </div>
-              <button class="btn btn-primary" onclick="Views.submitCheckIn()">
-                Get SentiraX picks
-              </button>
-              <div id="checkinError" class="error-text hidden"></div>
-            </div>
-          </div>
-        `;
-      },
-
-      initCheckIn() {
-        const slider = document.getElementById("moodSlider");
-        const label = document.getElementById("moodLabel");
-        const labels = {
-          1:"Very low (1)",2:"Low (2)",3:"Drained (3)",4:"Below neutral (4)",
-          5:"Neutral (5)",6:"Above neutral (6)",7:"Engaged (7)",8:"Hyped (8)",
-          9:"Very hyped (9)",10:"Maxed out (10)"
-        };
-        slider.addEventListener("input", e => {
-          label.textContent = labels[e.target.value] || `Mood ${e.target.value}`;
-        });
-
-        const moods = [
-          "Chill","Sad","Happy","Stressed","Tired",
-          "Romantic","Bored","Curious","Nostalgic","Anxious",
-          "Energetic","Cozy","Adventurous","Dark","Silly"
-        ];
-        const moodContainer = document.getElementById("moodTags");
-        moods.forEach(m => {
-          const div = document.createElement("div");
-          div.className = "mood-tag";
-          div.dataset.value = m;
-          div.textContent = m;
-          div.onclick = () => div.classList.toggle("selected");
-          moodContainer.appendChild(div);
-        });
-      },
-
-      submitCheckIn() {
-        if (!AppState.user) {
-          Views.showModal("Profile needed", "Please finish onboarding so SentiraX knows your age and taste.");
-          Router.navigate("onboarding");
-          return;
-        }
-        const slider = document.getElementById("moodSlider");
-        const moodScore = Number(slider.value || 5);
-        const freeText = document.getElementById("freeText").value.trim();
-        const typeFilter = document.getElementById("typeFilter").value;
-        const maxDurationStr = document.getElementById("maxDuration").value;
-        const maxDuration = maxDurationStr ? Number(maxDurationStr) : null;
-
-        const moods = Array.from(document.querySelectorAll("#moodTags .mood-tag.selected"))
-          .map(x => x.dataset.value);
-
-        const checkIn = {
-          moods,
-          mood_score: moodScore,
-          free_text: freeText,
-          type_filter: typeFilter,
-          max_duration_minutes: maxDuration
-        };
-        AppState.saveCheckIn(checkIn);
-        Router.navigate("recommendations");
-      },
-
-      recommendations() {
-        return `
-          <div class="center-block">
-            <h2 class="responsive-heading" style="margin-bottom:1rem;">SentiraX suggestions</h2>
-            <p class="small-text" style="margin-bottom:1.4rem;">
-              These will blend your baseline taste with how you’re feeling right now.
-            </p>
-            <div id="recsContainer">
-              <div class="card">
-                <div class="loading">
-                  <div class="spinner"></div>
-                  <p class="small-text">Thinking about your mood and browsing films...</p>
-                </div>
-              </div>
-            </div>
-            <button class="btn btn-secondary" style="margin-top:0.9rem;" onclick="Views.refreshRecommendations()">
-              🔄 New picks
+          <div style="text-align:center; animation:fadeInUp .5s ease .2s; animation-fill-mode:both;">
+            <button class="btn btn-primary" onclick="Router.navigate('onboarding')">
+              Get Started
             </button>
           </div>
-        `;
-      },
-
-      async initRecommendations() {
-  const c = document.getElementById("recsContainer");
-
-  // If we already have recs, just reuse them – no backend call
-  if (AppState.recommendations && AppState.recommendations.length) {
-    Views.renderRecommendations(AppState.lastSummary, AppState.recommendations);
-    return;
-  }
-
-  if (!AppState.user || !AppState.lastCheckIn) {
-    c.innerHTML = `
-      <div class="card">
-        <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
-        <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;">
-          <button class="btn btn-primary" onclick="Router.navigate('onboarding')">Set up profile</button>
-          <button class="btn btn-secondary" onclick="Router.navigate('check-in')">Do mood check-in</button>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  await Views.fetchRecommendations();
-},
-
-      async fetchRecommendations() {
-  const c = document.getElementById("recsContainer");
-  c.innerHTML = `
-    <div class="card">
-      <div class="loading">
-        <div class="spinner"></div>
-        <p class="small-text">Re-ranking titles for you...</p>
-      </div>
-    </div>
-  `;
-  try {
-    const body = {
-      user_profile: AppState.user,
-      check_in: AppState.lastCheckIn
-    };
-    const res = await fetch(BACKEND_BASE_URL + "/api/recommend", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      c.innerHTML = `
-        <div class="card">
-          <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
-          <p class="small-text">${(json && json.error) || ""}</p>
-          <p class="small-text">${(json && json.details) || ""}</p>
-          <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
         </div>
       `;
-      return;
-    }
+    },
 
-    AppState.recommendations = json.recommendations || [];
-    AppState.lastSummary = json.high_level_summary || "";
-    Views.renderRecommendations(json.high_level_summary, AppState.recommendations);
-  } catch (e) {
-    c.innerHTML = `
-      <div class="card">
-        <p class="small-text">Network error while getting recommendations.</p>
-        <p class="small-text">${e.message || e}</p>
-        <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
-      </div>
-    `;
-  }
-},
+    onboarding() {
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1.2rem;">Let’s set your baseline</h2>
+          <p class="small-text" style="margin-bottom:1.5rem;">
+            Age is required so we can safely handle 18+ content. Everything else just helps SentiraX learn your taste.
+          </p>
+          <div class="card">
+            <div class="form-group">
+              <label class="form-label">Age <span style="color:var(--danger);">*</span></label>
+              <input type="number" id="ageInput" min="13" max="120" class="form-input" placeholder="21">
+              <div id="ageError" class="error-text hidden">Please enter a valid age (13+).</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gender (optional)</label>
+              <select id="genderInput" class="form-select">
+                <option value="">Prefer not to say</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Genres you enjoy (optional)</label>
+              <div id="likedGenres" class="mood-tags"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Genres to avoid (optional)</label>
+              <div id="dislikedGenres" class="mood-tags"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Your usual goals (optional)</label>
+              <div id="goals" class="mood-tags"></div>
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:.5rem;">
+              <input type="checkbox" id="allowAdult" style="accent-color:#22c55e; width:18px; height:18px;">
+              <label for="allowAdult" class="form-label" style="margin-bottom:0;">Allow 18+ content (adult films)</label>
+            </div>
+            <p class="small-text">
+              18+ content is only considered if your age is 18+ and this toggle is on.
+            </p>
+            <div style="margin-top:1.3rem; display:flex; gap:.6rem; flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="Views.saveOnboarding()">Save & continue</button>
+            </div>
+          </div>
+        </div>
+      `;
+    },
 
-      renderRecommendations(summary, recs) {
-  const c = document.getElementById("recsContainer");
-  if (!recs || !recs.length) {
-    c.innerHTML = `
-      <div class="card">
-        <p class="small-text">No suitable titles came back. Try broadening your mood / filters.</p>
-      </div>
-    `;
-    return;
-  }
+    initOnboarding() {
+      const likedGenres = [
+        "Action", "Comedy", "Drama", "Romance", "Horror",
+        "Thriller", "Sci-Fi", "Fantasy", "Anime", "Documentary",
+        "Crime", "Mystery", "Adventure"
+      ];
+      const goals = [
+        "Escape and relax", "Laugh", "Get inspired", "Learn something",
+        "Background noise", "Watch with friends", "Date night"
+      ];
 
-  const summaryHtml = summary
-    ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
-    : "";
+      function renderChips(containerId, values) {
+        const el = document.getElementById(containerId);
+        el.innerHTML = "";
+        values.forEach(v => {
+          const div = document.createElement("div");
+          div.className = "mood-tag";
+          div.dataset.value = v;
+          div.textContent = v;
+          div.onclick = () => div.classList.toggle("selected");
+          el.appendChild(div);
+        });
+      }
 
-  const itemsHtml = recs.map((r) => {
-    const name = r.name || r.title || "Untitled";
-    const genres = (r.genres || []).slice(0, 3);
-    const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
-    const type = r.type === "show" ? "Series" : "Movie";
-    const year = r.release_year || null;   // ← NEW
-    const posterUrl = r.poster_path
-      ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
-      : null;
+      renderChips("likedGenres", likedGenres);
+      renderChips("dislikedGenres", likedGenres);
+      renderChips("goals", goals);
 
-    return `
+      const stored = AppState.user;
+      const ageInput = document.getElementById("ageInput");
+
+      if (stored) {
+        ageInput.value = stored.age || "";
+        document.getElementById("genderInput").value = stored.gender || "";
+        if (stored.liked_genres) {
+          stored.liked_genres.forEach(g => {
+            const chip = document.querySelector(`#likedGenres .mood-tag[data-value="${g}"]`);
+            if (chip) chip.classList.add("selected");
+          });
+        }
+        if (stored.disliked_genres) {
+          stored.disliked_genres.forEach(g => {
+            const chip = document.querySelector(`#dislikedGenres .mood-tag[data-value="${g}"]`);
+            if (chip) chip.classList.add("selected");
+          });
+        }
+        if (stored.goals) {
+          stored.goals.forEach(g => {
+            const chip = document.querySelector(`#goals .mood-tag[data-value="${g}"]`);
+            if (chip) chip.classList.add("selected");
+          });
+        }
+        if (stored.allow_adult) {
+          document.getElementById("allowAdult").checked = true;
+        }
+      }
+
+      ageInput.addEventListener("input", () => {
+        const v = Number(ageInput.value || 0);
+        const allow = document.getElementById("allowAdult");
+        if (v < 18) {
+          allow.checked = false;
+          allow.disabled = true;
+        } else {
+          allow.disabled = false;
+        }
+      });
+
+      if (stored?.age) {
+        ageInput.dispatchEvent(new Event("input"));
+      }
+    },
+
+    saveOnboarding() {
+      const ageEl = document.getElementById("ageInput");
+      const age = Number(ageEl.value || 0);
+      const err = document.getElementById("ageError");
+      if (!age || age < 13 || age > 120) {
+        err.classList.remove("hidden");
+        return;
+      }
+      err.classList.add("hidden");
+
+      function getSelected(containerId) {
+        return Array.from(document.querySelectorAll(`#${containerId} .mood-tag.selected`))
+          .map(x => x.dataset.value);
+      }
+
+      const gender = document.getElementById("genderInput").value || null;
+      const profile = {
+        age,
+        gender,
+        liked_genres: getSelected("likedGenres"),
+        disliked_genres: getSelected("dislikedGenres"),
+        goals: getSelected("goals"),
+        allow_adult: age >= 18 && document.getElementById("allowAdult").checked
+      };
+
+      AppState.saveUser(profile);
+      Router.navigate("check-in");
+    },
+
+    checkIn() {
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1rem;">How are you feeling today?</h2>
+          <p class="small-text" style="margin-bottom:1.8rem;">
+            Tell SentiraX how you feel right now.
+          </p>
+          <div class="card">
+            <div class="form-group">
+              <label class="form-label">Mood intensity</label>
+              <input type="range" id="moodSlider" class="mood-slider" min="1" max="10" value="5" aria-describedby="moodLabel">
+              <div style="display:flex;justify-content:space-between;margin-top:.4rem;font-size:.78rem;color:var(--text-muted);">
+                <span>Low energy</span>
+                <span id="moodLabel">Neutral (5)</span>
+                <span>High energy</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mood tags (optional)</label>
+              <div id="moodTags" class="mood-tags"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">What are you in the mood for? (optional)</label>
+              <textarea id="freeText" class="form-textarea" placeholder="e.g. cozy romcom, no heavy drama, can be a series"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select id="typeFilter" class="form-select">
+                <option value="any">Movies or shows</option>
+                <option value="movie">Movies only</option>
+                <option value="show">Shows only</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max duration (minutes, optional)</label>
+              <input type="number" id="maxDuration" class="form-input" min="10" max="300" placeholder="120">
+            </div>
+            <button class="btn btn-primary" onclick="Views.submitCheckIn()">
+              Get SentiraX picks
+            </button>
+            <div id="checkinError" class="error-text hidden"></div>
+          </div>
+        </div>
+      `;
+    },
+
+    initCheckIn() {
+      const slider = document.getElementById("moodSlider");
+      const label = document.getElementById("moodLabel");
+      const labels = {
+        1:"Very low (1)",2:"Low (2)",3:"Drained (3)",4:"Below neutral (4)",
+        5:"Neutral (5)",6:"Above neutral (6)",7:"Engaged (7)",8:"Hyped (8)",
+        9:"Very hyped (9)",10:"Maxed out (10)"
+      };
+      slider.addEventListener("input", e => {
+        label.textContent = labels[e.target.value] || `Mood ${e.target.value}`;
+      });
+
+      const moods = [
+        "Chill","Sad","Happy","Stressed","Tired",
+        "Romantic","Bored","Curious","Nostalgic","Anxious",
+        "Energetic","Cozy","Adventurous","Dark","Silly"
+      ];
+      const moodContainer = document.getElementById("moodTags");
+      moods.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "mood-tag";
+        div.dataset.value = m;
+        div.textContent = m;
+        div.onclick = () => div.classList.toggle("selected");
+        moodContainer.appendChild(div);
+      });
+    },
+
+    submitCheckIn() {
+      if (!AppState.user) {
+        Views.showModal("Profile needed", "Please finish onboarding so SentiraX knows your age and taste.");
+        Router.navigate("onboarding");
+        return;
+      }
+
+      const slider = document.getElementById("moodSlider");
+      const moodScore = Number(slider.value || 5);
+      const freeText = document.getElementById("freeText").value.trim();
+      const typeFilter = document.getElementById("typeFilter").value;
+      const maxDurationStr = document.getElementById("maxDuration").value;
+      const maxDuration = maxDurationStr ? Number(maxDurationStr) : null;
+
+      const moods = Array.from(document.querySelectorAll("#moodTags .mood-tag.selected"))
+        .map(x => x.dataset.value);
+
+      const checkIn = {
+        moods,
+        mood_score: moodScore,
+        free_text: freeText,
+        type_filter: typeFilter,
+        max_duration_minutes: maxDuration
+      };
+
+      AppState.saveCheckIn(checkIn);
+      Router.navigate("recommendations");
+    },
+
+    recommendations() {
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1rem;">SentiraX suggestions</h2>
+          <p class="small-text" style="margin-bottom:1.4rem;">
+            These will blend your baseline taste with how you’re feeling right now.
+          </p>
+          <div id="recsContainer">
+            <div class="card">
+              <div class="loading">
+                <div class="spinner"></div>
+                <p class="small-text">Thinking about your mood and browsing films...</p>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-secondary" style="margin-top:0.9rem;" onclick="Views.refreshRecommendations()">
+            🔄 New picks
+          </button>
+        </div>
+      `;
+    },
+
+    async initRecommendations() {
+      const c = document.getElementById("recsContainer");
+
+      if (AppState.recommendations && AppState.recommendations.length) {
+        Views.renderRecommendations(AppState.lastSummary, AppState.recommendations);
+        return;
+      }
+
+      if (!AppState.user || !AppState.lastCheckIn) {
+        c.innerHTML = `
+          <div class="card">
+            <p class="small-text">We’re missing either your profile or a mood check-in. Please do both first.</p>
+            <div style="margin-top:.8rem;display:flex;flex-direction:column;gap:.5rem;">
+              <button class="btn btn-primary" onclick="Router.navigate('onboarding')">Set up profile</button>
+              <button class="btn btn-secondary" onclick="Router.navigate('check-in')">Do mood check-in</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      await Views.fetchRecommendations();
+    },
+
+    async fetchRecommendations() {
+      const c = document.getElementById("recsContainer");
+      c.innerHTML = `
+        <div class="card">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p class="small-text">Re-ranking titles for you...</p>
+          </div>
+        </div>
+      `;
+
+      try {
+        const body = {
+          user_profile: AppState.user,
+          check_in: AppState.lastCheckIn
+        };
+        const res = await fetch(BACKEND_BASE_URL + "/api/recommend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+          c.innerHTML = `
+            <div class="card">
+              <p class="small-text">Error from backend: ${res.status} ${res.statusText}</p>
+              <p class="small-text">${(json && json.error) || ""}</p>
+              <p class="small-text">${(json && json.details) || ""}</p>
+              <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
+            </div>
+          `;
+          return;
+        }
+
+        AppState.recommendations = json.recommendations || [];
+        AppState.lastSummary = json.high_level_summary || "";
+        Views.renderRecommendations(json.high_level_summary, AppState.recommendations);
+      } catch (e) {
+        c.innerHTML = `
+          <div class="card">
+            <p class="small-text">Network error while getting recommendations.</p>
+            <p class="small-text">${e.message || e}</p>
+            <button class="btn btn-secondary" style="margin-top:.8rem;" onclick="Views.fetchRecommendations()">Try again</button>
+          </div>
+        `;
+      }
+    },
+
+    renderRecommendations(summary, recs) {
+      const c = document.getElementById("recsContainer");
+      if (!recs || !recs.length) {
+        c.innerHTML = `
+          <div class="card">
+            <p class="small-text">No suitable titles came back. Try broadening your mood / filters.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const summaryHtml = summary
+        ? `<p class="small-text" style="margin-bottom:1rem;">${summary}</p>`
+        : "";
+
+      const itemsHtml = recs.map(r => {
+        const name = r.name || r.title || "Untitled";
+        const genres = (r.genres || []).slice(0, 3);
+        const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
+        const type = r.type === "show" ? "Series" : "Movie";
+        const year = r.release_year || r.year || null;
+        const posterUrl = r.poster_path
+          ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
+          : null;
+
+        return `
   <div class="title-card" data-id="${r.id}">
     ${posterUrl ? `
       <img
@@ -1371,7 +1381,7 @@
         <div class="title-name">${name}</div>
         <div class="badge-row">
           <span class="badge badge-type">${type}</span>
-          ${year ? `<span class="badge">${year}</span>` : ""}        <!-- NEW -->
+          ${year ? `<span class="badge">${year}</span>` : ""}
           ${runtime ? `<span class="badge">${runtime}</span>` : ""}
           ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
           ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
@@ -1383,835 +1393,817 @@
     </div>
     ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
     ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
-</div>
-`;
-  }).join("");
+  </div>
+        `;
+      }).join("");
 
-  c.innerHTML = `
-    <div class="card">
-      ${summaryHtml}
-      ${itemsHtml}
-    </div>
-  `;
-
-  // detail navigation
-  document.querySelectorAll(".title-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const id = card.dataset.id;
-      if (!id) return;
-      const obj = AppState.recommendations.find(r => String(r.id) === String(id));
-      if (!obj) return;
-      AppState.selectedTitle = obj;
-      Router.navigate("detail", { title: obj });
-    });
-  });
-}
-
-
-  // watchlist toggles
-  document.querySelectorAll(".watchlist-toggle").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      Views.toggleWatchlist(id);
-    });
-  });
-},
-
-      refreshRecommendations() {
-  AppState.recommendations = [];
-  AppState.lastSummary = "";
-  Views.fetchRecommendations();
-},
-
-      toggleWatchlist(id) {
-        const item =
-          AppState.recommendations.find(r => r.id === id) ||
-          AppState.watchlist.find(r => r.id === id);
-        if (!item) return;
-        const exists = AppState.watchlist.find(r => r.id === id);
-        if (exists) {
-          AppState.removeFromWatchlist(id);
-          Views.showToast("Removed from watchlist");
-        } else {
-          AppState.addToWatchlist(item);
-          Views.showToast("Added to watchlist");
-        }
-      },
-
-      detail(title) {
-  const name = title.name || title.title || "Untitled";
-  const type = title.type === "show" ? "Series" : "Movie";
-  const genres = (title.genres || []).join(", ");
-  const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
-  const year = title.release_year || title.year || null;
-
-  const posterUrl = title.poster_path
-    ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
-    : null;
-
-  return `
-    <div class="center-block">
-      <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
-      <div class="card" style="margin-top:1rem;">
-        ${posterUrl ? `
-          <img
-            class="title-banner"
-            src="${posterUrl}"
-            alt="${name} poster"
-            loading="lazy"
-          />
-        ` : ""}
-        <div class="section-label">Title</div>
-        <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
-        <p class="small-text" style="margin-bottom:.6rem;">
-          ${type}${genres ? " • " + genres : ""}${runtime ? " • " + runtime : ""}
-          ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
-        </p>
-        <p class="small-text" style="margin-top:.8rem;">
-          ${title.summary || "Plot summary will appear once details load."}
-        </p>
-        ${title.reason ? `
-          <div style="margin-top:1rem;">
-            <div class="detail-section-title"><b>Why SentiraX picked this</b></div>
-            <p class="small-text">${title.reason}</p>
-          </div>
-        ` : ""}
-        <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
-          <button class="btn btn-secondary" id="detailWatchlistBtn">
-            ☆ Add to watchlist
-          </button>
-          <button class="btn btn-secondary" id="wikiDetailsBtn">
-            📖 See full details (Wikipedia)
-          </button>
+      c.innerHTML = `
+        <div class="card">
+          ${summaryHtml}
+          ${itemsHtml}
         </div>
-        <div id="detailMeta" style="margin-top:1rem;"></div>
-        <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
-      </div>
-    </div>
-  `;
-},
-
-      async initDetail(title) {
-  // Watchlist button
-  Views.setupDetailWatchlist(title);
-
-  // Wikipedia button
-  const wikiBtn = document.getElementById("wikiDetailsBtn");
-  if (wikiBtn) {
-    wikiBtn.addEventListener("click", () => {
-      Views.fetchWikiDetails(title);
-    });
-  }
-
-  // TMDB meta (cast + providers)
-  const container = document.getElementById("detailMeta");
-  const cacheKey = `${title.type}-${title.tmdb_id}`;
-  if (AppState.detailsCache[cacheKey]) {
-    Views.renderDetailMeta(AppState.detailsCache[cacheKey], container, title);
-    return;
-  }
-  container.innerHTML = `
-    <div class="loading">
-      <div class="spinner"></div>
-      <p class="small-text">Loading cast and watch providers...</p>
-    </div>
-  `;
-  try {
-    const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: title.tmdb_id })
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      container.innerHTML = `<p class="small-text">Could not load extra details.</p>`;
-      return;
-    }
-    AppState.detailsCache[cacheKey] = json;
-    Views.renderDetailMeta(json, container, title);
-  } catch (e) {
-    container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
-  }
-},
-
-      async fetchWikiDetails(title) {
-  const btn = document.getElementById("wikiDetailsBtn");
-  const container = document.getElementById("wikiDetailsContainer");
-  if (!btn || !container) return;
-
-  const name = title.name || title.title || "Untitled";
-  const year = title.release_year || title.year || null;
-
-  const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Loading from Wikipedia...";
-
-  container.innerHTML = `
-    <div class="loading">
-      <div class="spinner"></div>
-      <p class="small-text">Pulling full details from Wikipedia...</p>
-    </div>
-  `;
-
-  try {
-    const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: name, year })
-    });
-    const data = await res.json();
-
-    if (!res.ok || (!data.html && !data.summary)) {
-      container.innerHTML = `
-        <p class="small-text">Couldn’t load Wikipedia details for this title.</p>
-      `;
-      return;
-    }
-
-    const wikiTitle = data.wiki_title || name;
-    const wikiHtml = data.html || `<p class="small-text">${data.summary || "No details available."}</p>`;
-    const wikiUrl = data.url || null;
-
-    // Build the preview area using DOM APIs to avoid escaping issues
-    container.innerHTML = "";
-
-    const heading = document.createElement("div");
-    heading.className = "detail-section-title";
-    heading.textContent = "From Wikipedia";
-    container.appendChild(heading);
-
-    const box = document.createElement("div");
-    box.className = "small-text";
-    box.style.maxHeight = "260px";
-    box.style.overflow = "auto";
-    box.style.border = "1px solid var(--border-subtle)";
-    box.style.borderRadius = "10px";
-    box.style.padding = "0.75rem";
-    box.style.background = "#020617";
-    box.innerHTML = wikiHtml;
-    container.appendChild(box);
-
-
-    // Fullscreen button
-    const fullBtn = document.createElement("button");
-    fullBtn.className = "btn btn-secondary";
-    fullBtn.style.marginTop = "0.6rem";
-    fullBtn.type = "button";
-    fullBtn.textContent = "Expand";
-    fullBtn.addEventListener("click", () => {
-      Views.openWikiFullscreen(wikiTitle, wikiHtml, wikiUrl);
-    });
-    container.appendChild(fullBtn);
-  } catch (e) {
-    container.innerHTML = `
-      <p class="small-text">Error loading Wikipedia details: ${e.message || e}</p>
-    `;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-},
-
-      setupDetailWatchlist(title) {
-        const btn = document.getElementById("detailWatchlistBtn");
-        if (!btn) return;
-
-        const updateLabel = () => {
-          const inList = AppState.watchlist.some(item => item.id === title.id);
-          btn.textContent = inList ? "⭐ In watchlist" : "☆ Add to watchlist";
-        };
-
-        updateLabel();
-
-        btn.onclick = () => {
-          const inList = AppState.watchlist.some(item => item.id === title.id);
-          if (inList) {
-            AppState.removeFromWatchlist(title.id);
-            Views.showToast("Removed from watchlist");
-          } else {
-            AppState.addToWatchlist(title);
-            Views.showToast("Added to watchlist");
-          }
-          updateLabel();
-        };
-      },
-
-      renderDetailMeta(details, container, titleObj) {
-  const cast = details.cast || [];
-  const wp = details.watch_providers || {};
-  const groups = [
-    { key: "flatrate", label: "Streaming" },
-    { key: "rent",     label: "Rent" },
-    { key: "buy",      label: "Buy" }
-  ];
-
-  const titleName =
-    (titleObj && (titleObj.name || titleObj.title)) ||
-    "this title";
-
-  let castHtml = "";
-  if (cast.length) {
-    castHtml = `
-      <div class="detail-section-title">Cast</div>
-      <ul class="cast-list">
-        ${cast.slice(0, 8).map(c => `
-          <li>${c.name}${c.character ? " as " + c.character : ""}</li>
-        `).join("")}
-      </ul>
-    `;
-  }
-
-  // turn providers into clickable links
-  let providersHtml = "";
-  const groupBlocks = groups.map(g => {
-    const list = wp[g.key] || [];
-    if (!list.length) return "";
-
-    const names = list.map((p, idx) => {
-      const url =
-        p.url || Views.buildProviderUrl(p.provider_name, titleName);
-
-      const comma = idx < list.length - 1 ? ", " : "";
-      return `
-        <a
-          class="provider-name"
-          href="${url}"
-          target="_blank"
-          rel="noopener noreferrer"
-        >${p.provider_name}</a>${comma}
-      `;
-    }).join("");
-
-    return `
-      <div class="provider-group">
-        <div class="provider-group-title">${g.label}</div>
-        <div>${names}</div>
-      </div>
-    `;
-  }).filter(Boolean).join("");
-
-  if (groupBlocks) {
-  providersHtml = `
-    <div class="detail-section-title">Where TMDB says it’s available</div>
-    <div class="providers-groups">${groupBlocks}</div>
-    <p class="small-text" style="margin-top:.4rem;">
-      Availability is region-dependent and can change. Check directly in your preferred streaming app to confirm.
-    </p>
-  `;
-}
-
-// NEW: always show WATCH ON if we have a title
-const watchOnHtml = titleName ? Views.renderWatchOnLinks(titleName) : "";
-
-container.innerHTML = `
-  ${castHtml}
-  ${providersHtml}
-  ${watchOnHtml}
-`;
-},
-      buildProviderUrl(providerName, title) {
-  const q = encodeURIComponent(`${title} ${providerName} watch`);
-  const name = providerName.toLowerCase();
-        
-  if (name.includes("netflix")) {
-    return `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
-  }
-  if (name.includes("prime") || name.includes("amazon")) {
-    return `https://www.primevideo.com/search?phrase=${encodeURIComponent(title)}`;
-  }
-  if (name.includes("disney")) {
-    return `https://www.disneyplus.com/search/${encodeURIComponent(title)}`;
-  }
-  if (name.includes("apple")) {
-    return `https://tv.apple.com/search?term=${encodeURIComponent(title)}`;
-  }
-  if (name.includes("hulu")) {
-    return `https://www.hulu.com/search?q=${encodeURIComponent(title)}`;
-  }
-
-  // Fallback: Google search for "<title> <provider> watch"
-  return `https://www.google.com/search?q=${q}`;
-},
-      
-      
-      buildServiceSearchUrl(serviceName, title) {
-        
-  const lower = serviceName.toLowerCase();
-  const encodedTitle = encodeURIComponent(title);
-  const slugTitle = title.trim().replace(/\s+/g, "-");
-        
-  if (lower.includes("tubi")) {
-    return `https://tubitv.com/search/${encodedTitle}`;
-} else if (lower.includes("pluto")) {
-    return `https://pluto.tv/us/search?query=${encodedTitle}`;
-} else if (lower.includes("crackle")) {
-    return `https://www.crackle.com/search?query=${encodedTitle}`;
-} else if (lower.includes("roku")) {
-    return `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
-} else if (lower.includes("freevee")) {
-    return `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
-} else if (lower.includes("uflix")) {
-    return `https://uflix.cc/search?keyword=${encodedTitle}`;
-} else if (lower.includes("soap2day")) {
-    return `https://ww25.soap2day.day/?s=${encodedTitle}`;
-} else if (lower.includes("netmirror")) {
-    return `https://www.google.com/search?q=NetMirror+App`;
-} else if (lower.includes("cineb")) {
-    return `https://cineb.gg/search/${slugTitle}`;
-}else if (lower.includes("lookmovie")) {
-    return `https://www.google.com/search?q=LookMovie`;
-} else if (lower.includes("fmovies")) {
-    return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
-} else if (lower.includes("123movies")) {
-    return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
-} else if (lower.includes("yesmovies")) {
-    return `https://moviejabber.org/search/?s=${encodedTitle}`;
-} else if (lower.includes("flixtor")) {
-    return `https://flixtor.studio/?s=${encodedTitle}`;
-}
-
-  // Unknown service → Google fallback
-  return `https://www.google.com/search?q=${encodeURIComponent(
-    `${title} on ${serviceName}`
-  )}`;
-},
-
-      renderWatchOnLinks(titleName) {
-  const services = [
-  "Tubi",
-  "Pluto TV",
-  "Crackle",
-  "Roku Channel",
-  "Freevee",
-  "Uflix",
-  "Soap2Day",
-  "NetMirror",
-  "Cineb.net",
-  "FMovies",
-  "123Movies",
-  "LookMovie",
-  "YesMovies",
-  "FlixTor"
-];
-
-
-    const links = services.map(service => {
-    const url = Views.buildServiceSearchUrl(service, titleName);
-    return `
-      <a
-        class="stream-btn"
-        href="${url}"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        ${service}
-      </a>
-    `;
-  }).join("");
-
-  return `
-    <div class="detail-section-title" style="margin-top:.9rem;">Search on</div>
-    <div class="stream-row">
-      ${links}
-    </div>
-  `;
-},
-
-
-      watchlist() {
-        const list = AppState.watchlist;
-        if (!list.length) {
-          return `
-            <div class="center-block" style="text-align:center;padding:2.4rem 0;">
-              <div style="font-size:3rem;margin-bottom:.7rem;">📺</div>
-              <h2 class="responsive-heading" style="margin-bottom:.6rem;">Your watchlist is empty</h2>
-              <p class="small-text" style="margin-bottom:1.4rem;">Add shows and movies from your SentiraX picks to keep track of what you want to watch.</p>
-              <button class="btn btn-primary" onclick="Router.navigate('recommendations')">Go to Discover</button>
-            </div>
-          `;
-        }
-        const items = list.map(r => {
-  const name = r.name || r.title || "Untitled";
-  const type = r.type === "show" ? "Series" : "Movie";
-  const genres = (r.genres || []).slice(0,3).join(", ");
-  const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
-  return `
-    <div class="title-card" data-id="${r.id}">
-      <div class="title-header">
-        <div class="title-main">
-          <div class="title-name">${name}</div>
-          <div class="badge-row">
-            <span class="badge badge-type">${type}</span>
-            ${runtime ? `<span class="badge">${runtime}</span>` : ""}
-            ${genres ? `<span class="badge">${genres}</span>` : ""}
-          </div>
-        </div>
-        <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
-          🗑️
-        </button>
-      </div>
-      ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
-</div>
-  `;
-}).join("");
-        
-        return `
-          <div class="center-block">
-            <h2 class="responsive-heading" style="margin-bottom:1rem;">My watchlist</h2>
-            <div class="card">
-              ${items}
-            </div>
-          </div>
-        `;
-      },
-
-      initWatchlist() {
-  document.querySelectorAll(".title-card").forEach(card => {
-    card.addEventListener("click", () => {
-      const id = card.dataset.id;
-      if (!id) return;
-      const obj =
-        AppState.watchlist.find(r => String(r.id) === String(id)) ||
-        AppState.recommendations.find(r => String(r.id) === String(id));
-      if (!obj) return;
-      AppState.selectedTitle = obj;
-      Router.navigate("detail", { title: obj });
-    });
-  });
-
-  document.querySelectorAll(".watchlist-remove").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.id;
-      Views.removeFromWatchlist(id);
-    });
-  });
-},
-
-      removeFromWatchlist(id) {
-        AppState.removeFromWatchlist(id);
-        Views.showToast("Removed from watchlist");
-        Router.navigate("watchlist");
-      },
-
-      settings() {
-        const user = AppState.user;
-        return `
-          <div class="center-block">
-            <h2 class="responsive-heading" style="margin-bottom:1.1rem;">Settings</h2>
-            <div class="card">
-              <div class="section-label">Profile</div>
-              ${user ? `
-                <p class="small-text"><strong>Age:</strong> ${user.age}</p>
-                <p class="small-text"><strong>Gender:</strong> ${user.gender || "Not set"}</p>
-                <p class="small-text"><strong>Liked genres:</strong> ${(user.liked_genres || []).join(", ") || "None set"}</p>
-                <p class="small-text"><strong>Disliked genres:</strong> ${(user.disliked_genres || []).join(", ") || "None set"}</p>
-                <p class="small-text"><strong>Goals:</strong> ${(user.goals || []).join(", ") || "None set"}</p>
-                <p class="small-text"><strong>Allow 18+:</strong> ${user.allow_adult ? "Yes (18+)" : "No"}</p>
-              ` : `<p class="small-text">No profile yet. Complete onboarding to set one.</p>`}
-            </div>
-            <div class="card">
-              <div class="section-label">Usage</div>
-              <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
-              <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
-            </div>
-            <div class="card">
-              <div class="section-label">Data</div>
-              <p class="small-text" style="margin-bottom:0.8rem;">
-                Your profile and history are stored locally in this browser and sent to the backend only for generating recommendations. You can clear everything anytime.
-              </p>
-              <button class="btn btn-secondary" style="margin-bottom:0.6rem;" onclick="Views.clearHistory()">Clear history</button>
-              <button class="btn btn-secondary" onclick="Views.resetApp()">Reset all & start over</button>
-            </div>
-          </div>
-        `;
-      },
-
-      clearHistory() {
-        AppState.checkins = [];
-        Storage.set("checkins", []);
-        Views.showToast("History cleared");
-        Router.navigate("settings");
-      },
-
-      resetApp() {
-        Views.showConfirm(
-          "Reset SentiraX?",
-          "This clears your profile, watchlist, and mood history.",
-          () => {
-            AppState.reset();
-            Router.navigate("welcome");
-          }
-        );
-      },
-
-      showModal(title, message) {
-        const overlay = document.createElement("div");
-        overlay.className = "modal-overlay";
-        overlay.innerHTML = `
-          <div class="modal-content">
-            <h3 style="margin-bottom:.6rem;">${title}</h3>
-            <p class="small-text" style="margin-bottom:1rem;">${message}</p>
-            <button class="btn btn-primary" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">OK</button>
-          </div>
-        `;
-        document.body.appendChild(overlay);
-      },
-
-      showConfirm(title, message, onConfirm) {
-        const overlay = document.createElement("div");
-        overlay.className = "modal-overlay";
-        overlay.innerHTML = `
-          <div class="modal-content">
-            <h3 style="margin-bottom:.6rem;">${title}</h3>
-            <p class="small-text" style="margin-bottom:1rem;">${message}</p>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-              <button class="btn btn-secondary" style="flex:1;" data-role="cancel">Cancel</button>
-              <button class="btn btn-primary" style="flex:1;" data-role="ok">Confirm</button>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(overlay);
-        overlay.querySelector('[data-role="cancel"]').onclick = () => overlay.remove();
-        overlay.querySelector('[data-role="ok"]').onclick = () => {
-          overlay.remove();
-          if (typeof onConfirm === "function") onConfirm();
-        };
-      },
-
-      showToast(msg) {
-        const existing = document.getElementById("sentirax_toast");
-        if (existing) existing.remove();
-        const el = document.createElement("div");
-        el.id = "sentirax_toast";
-        el.style.position = "fixed";
-        el.style.bottom = "80px";
-        el.style.left = "50%";
-        el.style.transform = "translateX(-50%)";
-        el.style.background = "#020617";
-        el.style.color = "#e5e7eb";
-        el.style.border = "1px solid #22c55e55";
-        el.style.borderRadius = "999px";
-        el.style.padding = "0.45rem 0.9rem";
-        el.style.fontSize = "0.8rem";
-        el.style.boxShadow = "0 18px 40px rgba(0,0,0,0.9)";
-        el.style.zIndex = "60";
-        el.textContent = msg;
-        document.body.appendChild(el);
-        setTimeout(() => {
-          el.style.transition = "opacity .3s ease";
-          el.style.opacity = "0";
-          setTimeout(() => el.remove(), 300);
-        }, 1500);
-      },
-
-            // Render the current wiki-history entry into the fullscreen modal
-      renderWikiFullscreenCurrent() {
-        const entry = Views._wikiHistory[Views._wikiHistoryIndex];
-        if (!entry) return;
-
-        const titleEl = document.getElementById("wikiFullscreenTitle");
-        const textEl  = document.getElementById("wikiFullscreenText");
-
-        if (titleEl) titleEl.textContent = entry.title || "Wikipedia";
-        if (textEl) {
-          textEl.innerHTML = entry.html || "<p class='small-text'>No content available.</p>";
-          // re-attach link hijacking on the current page
-          Views.hijackWikipediaLinks(textEl);
-        }
-
-        // update nav buttons disabled state
-        const backBtn = document.getElementById("wikiNavBack");
-        const fwdBtn  = document.getElementById("wikiNavForward");
-        if (backBtn) backBtn.disabled = Views._wikiHistoryIndex <= 0;
-        if (fwdBtn)  fwdBtn.disabled  = Views._wikiHistoryIndex >= Views._wikiHistory.length - 1;
-      },
-
-      wikiGoBack() {
-        if (Views._wikiHistoryIndex > 0) {
-          Views._wikiHistoryIndex--;
-          Views.renderWikiFullscreenCurrent();
-        }
-      },
-
-      wikiGoForward() {
-        if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
-          Views._wikiHistoryIndex++;
-          Views.renderWikiFullscreenCurrent();
-        }
-      },
-
-      openWikiFullscreen(title, html) {
-  // Reset wiki navigation history with the first opened page
-  Views._wikiHistory = [
-    {
-      title: title || "Wikipedia",
-      html: html || "<p class='small-text'>No content available.</p>"
-    }
-  ];
-  Views._wikiHistoryIndex = 0;
-
-  // Render the current history entry into the fullscreen modal
-  Views.renderWikiFullscreenCurrent();
-
-  // Show modal
-  const modal = document.getElementById("wikiFullscreen");
-  if (modal) modal.classList.remove("hidden");
-
-  // Attach navigation button handlers
-  const backBtn = document.getElementById("wikiNavBack");
-  const fwdBtn  = document.getElementById("wikiNavForward");
-
-  if (backBtn) backBtn.onclick = () => Views.wikiGoBack();
-  if (fwdBtn)  fwdBtn.onclick  = () => Views.wikiGoForward();
-},
-
-
-closeWikiFullscreen() {
-  const modal = document.getElementById("wikiFullscreen");
-  if (modal) modal.classList.add("hidden");
-},
-      
-      
-      
-      hijackWikipediaLinks(container) {
-  if (!container) return;
-
-  // Avoid attaching multiple times to the same element
-  if (container._wikiHandlerAttached) return;
-  container._wikiHandlerAttached = true;
-
-  container.addEventListener("click", async (e) => {
-    const link = e.target.closest("a");
-    if (!link) return;
-
-    const hrefAttr = link.getAttribute("href");
-    if (!hrefAttr) return;
-
-    // Only intercept wiki-style links like /wiki/... or https://sentirax.vercel.app/wiki/...
-    if (!hrefAttr.includes("/wiki/")) {
-      return; // let external links behave normally
-    }
-
-    e.preventDefault();
-
-    // Figure out the page title from the URL
-    let pageTitle = null;
-    try {
-      const url = new URL(hrefAttr, window.location.origin);
-      const path = url.pathname; // e.g. /wiki/Shawn_Levy
-      const slug = path.substring(path.lastIndexOf("/") + 1);
-      pageTitle = decodeURIComponent(slug.replace(/_/g, " "));
-    } catch {
-      pageTitle = hrefAttr;
-    }
-
-    if (!pageTitle) return;
-
-    // Show loading state inside the fullscreen modal
-    const textEl  = document.getElementById("wikiFullscreenText");
-
-    if (textEl) {
-      textEl.innerHTML = `
-        <div class="loading">
-          <div class="spinner"></div>
-          <p class="small-text">Loading Wikipedia page: ${pageTitle}...</p>
-        </div>
-      `;
-    }
-
-    try {
-      const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: pageTitle })
+      ";
+
+      // detail navigation
+      c.querySelectorAll(".title-card").forEach(card => {
+        card.addEventListener("click", () => {
+          const id = card.dataset.id;
+          if (!id) return;
+          const obj = AppState.recommendations.find(r => String(r.id) === String(id));
+          if (!obj) return;
+          AppState.selectedTitle = obj;
+          Router.navigate("detail", { title: obj });
+        });
       });
 
-      const data = await res.json();
+      // watchlist toggles
+      c.querySelectorAll(".watchlist-toggle").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          Views.toggleWatchlist(id);
+        });
+      });
+    },
 
-      if (!res.ok || !data.html) {
-        if (textEl) {
-          textEl.innerHTML = `<p class="small-text">Could not load Wikipedia page "${pageTitle}".</p>`;
-        }
+    refreshRecommendations() {
+      AppState.recommendations = [];
+      AppState.lastSummary = "";
+      Views.fetchRecommendations();
+    },
+
+    toggleWatchlist(id) {
+      const item =
+        AppState.recommendations.find(r => r.id === id) ||
+        AppState.watchlist.find(r => r.id === id);
+      if (!item) return;
+      const exists = AppState.watchlist.find(r => r.id === id);
+      if (exists) {
+        AppState.removeFromWatchlist(id);
+        Views.showToast("Removed from watchlist");
+      } else {
+        AppState.addToWatchlist(item);
+        Views.showToast("Added to watchlist");
+      }
+    },
+
+    detail(title) {
+      const name = title.name || title.title || "Untitled";
+      const type = title.type === "show" ? "Series" : "Movie";
+      const genres = (title.genres || []).join(", ");
+      const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+      const year = title.release_year || title.year || null;
+
+      const posterUrl = title.poster_path
+        ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
+        : null;
+
+      return `
+        <div class="center-block">
+          <button class="btn-ghost" onclick="Router.navigate('recommendations')">← Back to picks</button>
+          <div class="card" style="margin-top:1rem;">
+            ${posterUrl ? `
+              <img
+                class="title-banner"
+                src="${posterUrl}"
+                alt="${name} poster"
+                loading="lazy"
+              />
+            ` : ""}
+            <div class="section-label">Title</div>
+            <h2 class="responsive-heading" style="margin-bottom:.3rem;">${name}</h2>
+            <p class="small-text" style="margin-bottom:.6rem;">
+              ${type}
+              ${year ? " • " + year : ""}
+              ${genres ? " • " + genres : ""}
+              ${runtime ? " • " + runtime : ""}
+              ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
+            </p>
+            <p class="small-text" style="margin-top:.8rem;">
+              ${title.summary || "Plot summary will appear once details load."}
+            </p>
+            ${title.reason ? `
+              <div style="margin-top:1rem;">
+                <div class="detail-section-title"><b>Why SentiraX picked this</b></div>
+                <p class="small-text">${title.reason}</p>
+              </div>
+            ` : ""}
+            <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
+              <button class="btn btn-secondary" id="detailWatchlistBtn">
+                ☆ Add to watchlist
+              </button>
+              <button class="btn btn-secondary" id="wikiDetailsBtn">
+                📖 See full details (Wikipedia)
+              </button>
+            </div>
+            <div id="detailMeta" style="margin-top:1rem;"></div>
+            <div id="wikiDetailsContainer" style="margin-top:1rem;"></div>
+          </div>
+        </div>
+      `;
+    },
+
+    async initDetail(title) {
+      // Watchlist button
+      Views.setupDetailWatchlist(title);
+
+      // Wikipedia button
+      const wikiBtn = document.getElementById("wikiDetailsBtn");
+      if (wikiBtn) {
+        wikiBtn.addEventListener("click", () => {
+          Views.fetchWikiDetails(title);
+        });
+      }
+
+      // TMDB meta (cast + providers)
+      const container = document.getElementById("detailMeta");
+      const cacheKey = `${title.type}-${title.tmdb_id}`;
+      if (AppState.detailsCache[cacheKey]) {
+        Views.renderDetailMeta(AppState.detailsCache[cacheKey], container, title);
         return;
       }
 
-      const newTitle = data.wiki_title || pageTitle;
-      const newHtml  = data.html || "<p class='small-text'>No content available.</p>";
+      container.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p class="small-text">Loading cast and watch providers...</p>
+        </div>
+      `;
 
-      // ---- update wiki navigation history ----
-      // If we had gone back, drop any "forward" pages
-      if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
-        Views._wikiHistory = Views._wikiHistory.slice(0, Views._wikiHistoryIndex + 1);
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/title-details", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: title.tmdb_id })
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          container.innerHTML = `<p class="small-text">Could not load extra details.</p>`;
+          return;
+        }
+        AppState.detailsCache[cacheKey] = json;
+        Views.renderDetailMeta(json, container, title);
+      } catch (e) {
+        container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
+      }
+    },
+
+    async fetchWikiDetails(title) {
+      const btn = document.getElementById("wikiDetailsBtn");
+      const container = document.getElementById("wikiDetailsContainer");
+      if (!btn || !container) return;
+
+      const name = title.name || title.title || "Untitled";
+      const year = title.release_year || title.year || null;
+
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Loading from Wikipedia...";
+
+      container.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p class="small-text">Pulling full details from Wikipedia...</p>
+        </div>
+      `;
+
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: name, year })
+        });
+        const data = await res.json();
+
+        if (!res.ok || (!data.html && !data.summary)) {
+          container.innerHTML = `
+            <p class="small-text">Couldn’t load Wikipedia details for this title.</p>
+          `;
+          return;
+        }
+
+        const wikiTitle = data.title || data.wiki_title || name;
+        const wikiHtml = data.html || `<p class="small-text">${data.summary || "No details available."}</p>`;
+        const wikiUrl = data.url || null;
+
+        // Build the preview area using DOM APIs to avoid escaping issues
+        container.innerHTML = "";
+
+        const heading = document.createElement("div");
+        heading.className = "detail-section-title";
+        heading.textContent = "From Wikipedia";
+        container.appendChild(heading);
+
+        const box = document.createElement("div");
+        box.className = "small-text";
+        box.style.maxHeight = "260px";
+        box.style.overflow = "auto";
+        box.style.border = "1px solid var(--border-subtle)";
+        box.style.borderRadius = "10px";
+        box.style.padding = "0.75rem";
+        box.style.background = "#020617";
+        box.innerHTML = wikiHtml;
+        container.appendChild(box);
+
+        // Fullscreen button
+        const fullBtn = document.createElement("button");
+        fullBtn.className = "btn btn-secondary";
+        fullBtn.style.marginTop = "0.6rem";
+        fullBtn.type = "button";
+        fullBtn.textContent = "Expand";
+        fullBtn.addEventListener("click", () => {
+          Views.openWikiFullscreen(wikiTitle, wikiHtml, wikiUrl);
+        });
+        container.appendChild(fullBtn);
+      } catch (e) {
+        container.innerHTML = `
+          <p class="small-text">Error loading Wikipedia details: ${e.message || e}</p>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    },
+
+    setupDetailWatchlist(title) {
+      const btn = document.getElementById("detailWatchlistBtn");
+      if (!btn) return;
+
+      const updateLabel = () => {
+        const inList = AppState.watchlist.some(item => item.id === title.id);
+        btn.textContent = inList ? "⭐ In watchlist" : "☆ Add to watchlist";
+      };
+
+      updateLabel();
+
+      btn.onclick = () => {
+        const inList = AppState.watchlist.some(item => item.id === title.id);
+        if (inList) {
+          AppState.removeFromWatchlist(title.id);
+          Views.showToast("Removed from watchlist");
+        } else {
+          AppState.addToWatchlist(title);
+          Views.showToast("Added to watchlist");
+        }
+        updateLabel();
+      };
+    },
+
+    renderDetailMeta(details, container, titleObj) {
+      const cast = details.cast || [];
+      const wp = details.watch_providers || {};
+      const groups = [
+        { key: "flatrate", label: "Streaming" },
+        { key: "rent",     label: "Rent" },
+        { key: "buy",      label: "Buy" }
+      ];
+
+      const titleName =
+        (titleObj && (titleObj.name || titleObj.title)) ||
+        "this title";
+
+      let castHtml = "";
+      if (cast.length) {
+        castHtml = `
+          <div class="detail-section-title">Cast</div>
+          <ul class="cast-list">
+            ${cast.slice(0, 8).map(c => `
+              <li>${c.name}${c.character ? " as " + c.character : ""}</li>
+            `).join("")}
+          </ul>
+        `;
       }
 
-      Views._wikiHistory.push({
-        title: newTitle,
-        html:  newHtml
-      });
-      Views._wikiHistoryIndex = Views._wikiHistory.length - 1;
+      let providersHtml = "";
+      const groupBlocks = groups.map(g => {
+        const list = wp[g.key] || [];
+        if (!list.length) return "";
 
-      // Render the new current page (this also re-hijacks links + updates buttons)
-      Views.renderWikiFullscreenCurrent();
-    } catch (err) {
-      if (textEl) {
-        textEl.innerHTML = `<p class="small-text">Error loading Wikipedia page: ${err.message || err}</p>`;
+        const names = list.map((p, idx) => {
+          const url =
+            p.url || Views.buildProviderUrl(p.provider_name, titleName);
+
+          const comma = idx < list.length - 1 ? ", " : "";
+          return `
+            <a
+              class="provider-name"
+              href="${url}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >${p.provider_name}</a>${comma}
+          `;
+        }).join("");
+
+        return `
+          <div class="provider-group">
+            <div class="provider-group-title">${g.label}</div>
+            <div>${names}</div>
+          </div>
+        `;
+      }).filter(Boolean).join("");
+
+      if (groupBlocks) {
+        providersHtml = `
+          <div class="detail-section-title">Where TMDB says it’s available</div>
+          <div class="providers-groups">${groupBlocks}</div>
+          <p class="small-text" style="margin-top:.4rem;">
+            Availability is region-dependent and can change. Check directly in your preferred streaming app to confirm.
+          </p>
+        `;
       }
-    }
-  });
-}
 
-    };
+      const watchOnHtml = titleName ? Views.renderWatchOnLinks(titleName) : "";
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.querySelectorAll(".nav-item").forEach(item => {
-        item.addEventListener("click", () => {
-          Router.navigate(item.dataset.view);
+      container.innerHTML = `
+        ${castHtml}
+        ${providersHtml}
+        ${watchOnHtml}
+      `;
+    },
+
+    buildProviderUrl(providerName, title) {
+      const q = encodeURIComponent(`${title} ${providerName} watch`);
+      const name = providerName.toLowerCase();
+
+      if (name.includes("netflix")) {
+        return `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
+      }
+      if (name.includes("prime") || name.includes("amazon")) {
+        return `https://www.primevideo.com/search?phrase=${encodeURIComponent(title)}`;
+      }
+      if (name.includes("disney")) {
+        return `https://www.disneyplus.com/search/${encodeURIComponent(title)}`;
+      }
+      if (name.includes("apple")) {
+        return `https://tv.apple.com/search?term=${encodeURIComponent(title)}`;
+      }
+      if (name.includes("hulu")) {
+        return `https://www.hulu.com/search?q=${encodeURIComponent(title)}`;
+      }
+
+      return `https://www.google.com/search?q=${q}`;
+    },
+
+    buildServiceSearchUrl(serviceName, title) {
+      const lower = serviceName.toLowerCase();
+      const encodedTitle = encodeURIComponent(title);
+      const slugTitle = title.trim().replace(/\s+/g, "-");
+
+      if (lower.includes("tubi")) {
+        return `https://tubitv.com/search/${encodedTitle}`;
+      } else if (lower.includes("pluto")) {
+        return `https://pluto.tv/us/search?query=${encodedTitle}`;
+      } else if (lower.includes("crackle")) {
+        return `https://www.crackle.com/search?query=${encodedTitle}`;
+      } else if (lower.includes("roku")) {
+        return `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
+      } else if (lower.includes("freevee")) {
+        return `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
+      } else if (lower.includes("uflix")) {
+        return `https://uflix.cc/search?keyword=${encodedTitle}`;
+      } else if (lower.includes("soap2day")) {
+        return `https://ww25.soap2day.day/?s=${encodedTitle}`;
+      } else if (lower.includes("netmirror")) {
+        return `https://www.google.com/search?q=NetMirror+App`;
+      } else if (lower.includes("cineb")) {
+        return `https://cineb.gg/search/${slugTitle}`;
+      } else if (lower.includes("lookmovie")) {
+        return `https://www.google.com/search?q=LookMovie`;
+      } else if (lower.includes("fmovies")) {
+        return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+      } else if (lower.includes("123movies")) {
+        return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+      } else if (lower.includes("yesmovies")) {
+        return `https://moviejabber.org/search/?s=${encodedTitle}`;
+      } else if (lower.includes("flixtor")) {
+        return `https://flixtor.studio/?s=${encodedTitle}`;
+      }
+
+      return `https://www.google.com/search?q=${encodeURIComponent(
+        `${title} on ${serviceName}`
+      )}`;
+    },
+
+    renderWatchOnLinks(titleName) {
+      const services = [
+        "Tubi",
+        "Pluto TV",
+        "Crackle",
+        "Roku Channel",
+        "Freevee",
+        "Uflix",
+        "Soap2Day",
+        "NetMirror",
+        "Cineb.net",
+        "FMovies",
+        "123Movies",
+        "LookMovie",
+        "YesMovies",
+        "FlixTor"
+      ];
+
+      const links = services.map(service => {
+        const url = Views.buildServiceSearchUrl(service, titleName);
+        return `
+          <a
+            class="stream-btn"
+            href="${url}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ${service}
+          </a>
+        `;
+      }).join("");
+
+      return `
+        <div class="detail-section-title" style="margin-top:.9rem;">Search on</div>
+        <div class="stream-row">
+          ${links}
+        </div>
+      `;
+    },
+
+    watchlist() {
+      const list = AppState.watchlist;
+      if (!list.length) {
+        return `
+          <div class="center-block" style="text-align:center;padding:2.4rem 0;">
+            <div style="font-size:3rem;margin-bottom:.7rem;">📺</div>
+            <h2 class="responsive-heading" style="margin-bottom:.6rem;">Your watchlist is empty</h2>
+            <p class="small-text" style="margin-bottom:1.4rem;">Add shows and movies from your SentiraX picks to keep track of what you want to watch.</p>
+            <button class="btn btn-primary" onclick="Router.navigate('recommendations')">Go to Discover</button>
+          </div>
+        `;
+      }
+
+      const items = list.map(r => {
+        const name = r.name || r.title || "Untitled";
+        const type = r.type === "show" ? "Series" : "Movie";
+        const genresStr = (r.genres || []).slice(0, 3).join(", ");
+        const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
+        const year = r.release_year || r.year || "";
+
+        return `
+          <div class="title-card" data-id="${r.id}">
+            <div class="title-header">
+              <div class="title-main">
+                <div class="title-name">${name}</div>
+                <div class="badge-row">
+                  <span class="badge badge-type">${type}</span>
+                  ${year ? `<span class="badge">${year}</span>` : ""}
+                  ${runtime ? `<span class="badge">${runtime}</span>` : ""}
+                  ${genresStr ? `<span class="badge">${genresStr}</span>` : ""}
+                </div>
+              </div>
+              <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
+                🗑️
+              </button>
+            </div>
+            ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1rem;">My watchlist</h2>
+          <div class="card">
+            ${items}
+          </div>
+        </div>
+      `;
+    },
+
+    initWatchlist() {
+      document.querySelectorAll(".title-card").forEach(card => {
+        card.addEventListener("click", () => {
+          const id = card.dataset.id;
+          if (!id) return;
+          const obj =
+            AppState.watchlist.find(r => String(r.id) === String(id)) ||
+            AppState.recommendations.find(r => String(r.id) === String(id));
+          if (!obj) return;
+          AppState.selectedTitle = obj;
+          Router.navigate("detail", { title: obj });
         });
       });
-      AppState.init();
-      Router.navigate(AppState.currentView);
-    });
 
-    // PWA service worker
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("./service-worker.js")
-          .catch(() => {});
+      document.querySelectorAll(".watchlist-remove").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          Views.removeFromWatchlist(id);
+        });
+      });
+    },
+
+    removeFromWatchlist(id) {
+      AppState.removeFromWatchlist(id);
+      Views.showToast("Removed from watchlist");
+      Router.navigate("watchlist");
+    },
+
+    settings() {
+      const user = AppState.user;
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1.1rem;">Settings</h2>
+          <div class="card">
+            <div class="section-label">Profile</div>
+            ${user ? `
+              <p class="small-text"><strong>Age:</strong> ${user.age}</p>
+              <p class="small-text"><strong>Gender:</strong> ${user.gender || "Not set"}</p>
+              <p class="small-text"><strong>Liked genres:</strong> ${(user.liked_genres || []).join(", ") || "None set"}</p>
+              <p class="small-text"><strong>Disliked genres:</strong> ${(user.disliked_genres || []).join(", ") || "None set"}</p>
+              <p class="small-text"><strong>Goals:</strong> ${(user.goals || []).join(", ") || "None set"}</p>
+              <p class="small-text"><strong>Allow 18+:</strong> ${user.allow_adult ? "Yes (18+)" : "No"}</p>
+            ` : `<p class="small-text">No profile yet. Complete onboarding to set one.</p>`}
+          </div>
+          <div class="card">
+            <div class="section-label">Usage</div>
+            <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
+            <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
+          </div>
+          <div class="card">
+            <div class="section-label">Data</div>
+            <p class="small-text" style="margin-bottom:0.8rem;">
+              Your profile and history are stored locally in this browser and sent to the backend only for generating recommendations. You can clear everything anytime.
+            </p>
+            <button class="btn btn-secondary" style="margin-bottom:0.6rem;" onclick="Views.clearHistory()">Clear history</button>
+            <button class="btn btn-secondary" onclick="Views.resetApp()">Reset all & start over</button>
+          </div>
+        </div>
+      `;
+    },
+
+    clearHistory() {
+      AppState.checkins = [];
+      Storage.set("checkins", []);
+      Views.showToast("History cleared");
+      Router.navigate("settings");
+    },
+
+    resetApp() {
+      Views.showConfirm(
+        "Reset SentiraX?",
+        "This clears your profile, watchlist, and mood history.",
+        () => {
+          AppState.reset();
+          Router.navigate("welcome");
+        }
+      );
+    },
+
+    showModal(title, message) {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal-content">
+          <h3 style="margin-bottom:.6rem;">${title}</h3>
+          <p class="small-text" style="margin-bottom:1rem;">${message}</p>
+          <button class="btn btn-primary" style="width:100%;" onclick="this.closest('.modal-overlay').remove()">OK</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    },
+
+    showConfirm(title, message, onConfirm) {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal-content">
+          <h3 style="margin-bottom:.6rem;">${title}</h3>
+          <p class="small-text" style="margin-bottom:1rem;">${message}</p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn btn-secondary" style="flex:1;" data-role="cancel">Cancel</button>
+            <button class="btn btn-primary" style="flex:1;" data-role="ok">Confirm</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      overlay.querySelector('[data-role="cancel"]').onclick = () => overlay.remove();
+      overlay.querySelector('[data-role="ok"]').onclick = () => {
+        overlay.remove();
+        if (typeof onConfirm === "function") onConfirm();
+      };
+    },
+
+    showToast(msg) {
+      const existing = document.getElementById("sentirax_toast");
+      if (existing) existing.remove();
+      const el = document.createElement("div");
+      el.id = "sentirax_toast";
+      el.style.position = "fixed";
+      el.style.bottom = "80px";
+      el.style.left = "50%";
+      el.style.transform = "translateX(-50%)";
+      el.style.background = "#020617";
+      el.style.color = "#e5e7eb";
+      el.style.border = "1px solid #22c55e55";
+      el.style.borderRadius = "999px";
+      el.style.padding = "0.45rem 0.9rem";
+      el.style.fontSize = "0.8rem";
+      el.style.boxShadow = "0 18px 40px rgba(0,0,0,0.9)";
+      el.style.zIndex = "60";
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = "opacity .3s ease";
+        el.style.opacity = "0";
+        setTimeout(() => el.remove(), 300);
+      }, 1500);
+    },
+
+    // ---------- Wikipedia fullscreen nav ----------
+
+    renderWikiFullscreenCurrent() {
+      const entry = Views._wikiHistory[Views._wikiHistoryIndex];
+      if (!entry) return;
+
+      const titleEl = document.getElementById("wikiFullscreenTitle");
+      const textEl  = document.getElementById("wikiFullscreenText");
+
+      if (titleEl) titleEl.textContent = entry.title || "Wikipedia";
+      if (textEl) {
+        textEl.innerHTML = entry.html || "<p class='small-text'>No content available.</p>";
+        Views.hijackWikipediaLinks(textEl);
+      }
+
+      const backBtn = document.getElementById("wikiNavBack");
+      const fwdBtn  = document.getElementById("wikiNavForward");
+      if (backBtn) backBtn.disabled = Views._wikiHistoryIndex <= 0;
+      if (fwdBtn)  fwdBtn.disabled  = Views._wikiHistoryIndex >= Views._wikiHistory.length - 1;
+    },
+
+    wikiGoBack() {
+      if (Views._wikiHistoryIndex > 0) {
+        Views._wikiHistoryIndex--;
+        Views.renderWikiFullscreenCurrent();
+      }
+    },
+
+    wikiGoForward() {
+      if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
+        Views._wikiHistoryIndex++;
+        Views.renderWikiFullscreenCurrent();
+      }
+    },
+
+    openWikiFullscreen(title, html /*, url */) {
+      Views._wikiHistory = [
+        {
+          title: title || "Wikipedia",
+          html: html || "<p class='small-text'>No content available.</p>"
+        }
+      ];
+      Views._wikiHistoryIndex = 0;
+
+      Views.renderWikiFullscreenCurrent();
+
+      const modal = document.getElementById("wikiFullscreen");
+      if (modal) modal.classList.remove("hidden");
+
+      const backBtn = document.getElementById("wikiNavBack");
+      const fwdBtn  = document.getElementById("wikiNavForward");
+
+      if (backBtn) backBtn.onclick = () => Views.wikiGoBack();
+      if (fwdBtn)  fwdBtn.onclick  = () => Views.wikiGoForward();
+    },
+
+    closeWikiFullscreen() {
+      const modal = document.getElementById("wikiFullscreen");
+      if (modal) modal.classList.add("hidden");
+    },
+
+    hijackWikipediaLinks(container) {
+      if (!container) return;
+      if (container._wikiHandlerAttached) return;
+      container._wikiHandlerAttached = true;
+
+      container.addEventListener("click", async (e) => {
+        const link = e.target.closest("a");
+        if (!link) return;
+
+        const hrefAttr = link.getAttribute("href");
+        if (!hrefAttr) return;
+
+        if (!hrefAttr.includes("/wiki/")) {
+          return;
+        }
+
+        e.preventDefault();
+
+        let pageTitle = null;
+        try {
+          const url = new URL(hrefAttr, window.location.origin);
+          const path = url.pathname;
+          const slug = path.substring(path.lastIndexOf("/") + 1);
+          pageTitle = decodeURIComponent(slug.replace(/_/g, " "));
+        } catch {
+          pageTitle = hrefAttr;
+        }
+
+        if (!pageTitle) return;
+
+        const textEl  = document.getElementById("wikiFullscreenText");
+        if (textEl) {
+          textEl.innerHTML = `
+            <div class="loading">
+              <div class="spinner"></div>
+              <p class="small-text">Loading Wikipedia page: ${pageTitle}...</p>
+            </div>
+          `;
+        }
+
+        try {
+          const res = await fetch(BACKEND_BASE_URL + "/api/wiki-full", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: pageTitle })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.html) {
+            if (textEl) {
+              textEl.innerHTML = `<p class="small-text">Could not load Wikipedia page "${pageTitle}".</p>`;
+            }
+            return;
+          }
+
+          const newTitle = data.title || data.wiki_title || pageTitle;
+          const newHtml  = data.html || "<p class='small-text'>No content available.</p>";
+
+          if (Views._wikiHistoryIndex < Views._wikiHistory.length - 1) {
+            Views._wikiHistory = Views._wikiHistory.slice(0, Views._wikiHistoryIndex + 1);
+          }
+
+          Views._wikiHistory.push({
+            title: newTitle,
+            html:  newHtml
+          });
+          Views._wikiHistoryIndex = Views._wikiHistory.length - 1;
+
+          Views.renderWikiFullscreenCurrent();
+        } catch (err) {
+          if (textEl) {
+            textEl.innerHTML = `<p class="small-text">Error loading Wikipedia page: ${err.message || err}</p>`;
+          }
+        }
       });
     }
+  };
 
-    let deferredInstallPrompt = null;
-
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-
-  const btn = document.getElementById("installPwaBtn");
-  if (btn) btn.classList.remove("hidden");
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("installPwaBtn");
-  if (!btn) return;
-
-  btn.addEventListener("click", async () => {
-    if (!deferredInstallPrompt) return;
-
-    deferredInstallPrompt.prompt();
-    const outcome = await deferredInstallPrompt.userChoice;
-
-    // hide after choice
-    if (outcome.outcome) {
-      btn.classList.add("hidden");
-    }
-    deferredInstallPrompt = null;
+  // Initial boot
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        Router.navigate(item.dataset.view);
+      });
+    });
+    AppState.init();
+    Router.navigate(AppState.currentView);
   });
-});
 
-  </script>
+  // PWA service worker
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("./service-worker.js")
+        .catch(() => {});
+    });
+  }
+
+  // PWA install prompt handling
+  let deferredInstallPrompt = null;
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+
+    const btn = document.getElementById("installPwaBtn");
+    if (btn) btn.classList.remove("hidden");
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("installPwaBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) return;
+
+      deferredInstallPrompt.prompt();
+      const outcome = await deferredInstallPrompt.userChoice;
+
+      if (outcome.outcome) {
+        btn.classList.add("hidden");
+      }
+      deferredInstallPrompt = null;
+    });
+  });
+</script>
+
   
   <!-- Fullscreen Wikipedia modal -->
 <div id="wikiFullscreen" class="modal-overlay hidden">
