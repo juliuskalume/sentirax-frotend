@@ -1351,22 +1351,10 @@
     const genres = (r.genres || []).slice(0, 3);
     const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
     const type = r.type === "show" ? "Series" : "Movie";
-    const jsonStr = encodeURIComponent(JSON.stringify(r));
-
+    const year = r.release_year || null;   // ← NEW
     const posterUrl = r.poster_path
       ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
       : null;
-
-    const posterHtml = posterUrl
-      ? `
-        <img
-          class="title-banner"
-          src="${posterUrl}"
-          alt="${name} poster"
-          loading="lazy"
-        />
-      `
-      : "";
 
     return `
   <div class="title-card" data-id="${r.id}">
@@ -1383,6 +1371,7 @@
         <div class="title-name">${name}</div>
         <div class="badge-row">
           <span class="badge badge-type">${type}</span>
+          ${year ? `<span class="badge">${year}</span>` : ""}        <!-- NEW -->
           ${runtime ? `<span class="badge">${runtime}</span>` : ""}
           ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
           ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
@@ -1396,7 +1385,6 @@
     ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
 </div>
 `;
-
   }).join("");
 
   c.innerHTML = `
@@ -1408,15 +1396,17 @@
 
   // detail navigation
   document.querySelectorAll(".title-card").forEach(card => {
-  card.addEventListener("click", () => {
-    const id = card.dataset.id;
-    if (!id) return;
-    const obj = AppState.recommendations.find(r => String(r.id) === String(id));
-    if (!obj) return;
-    AppState.selectedTitle = obj;
-    Router.navigate("detail", { title: obj });
+    card.addEventListener("click", () => {
+      const id = card.dataset.id;
+      if (!id) return;
+      const obj = AppState.recommendations.find(r => String(r.id) === String(id));
+      if (!obj) return;
+      AppState.selectedTitle = obj;
+      Router.navigate("detail", { title: obj });
+    });
   });
-});
+}
+
 
   // watchlist toggles
   document.querySelectorAll(".watchlist-toggle").forEach((btn) => {
@@ -1454,6 +1444,7 @@
   const type = title.type === "show" ? "Series" : "Movie";
   const genres = (title.genres || []).join(", ");
   const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
+  const year = title.release_year || title.year || null;
 
   const posterUrl = title.poster_path
     ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
