@@ -204,6 +204,55 @@
       color: var(--accent);
     }
 
+    .cookie-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #111;
+  color: #fff;
+  padding: 1rem;
+  z-index: 9999;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+}
+
+.cookie-banner.hidden {
+  display: none;
+}
+
+.cookie-content {
+  max-width: 900px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cookie-banner a {
+  color: #4dabff;
+}
+
+#cookie-accept-btn {
+  background: #4dabff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  align-self: flex-start;
+}
+  
+#cookie-reject-btn {
+  background: #333;
+  border: 1px solid #666;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
     .form-group { margin-bottom: 1.5rem; }
     .form-label {
       display: block;
@@ -790,6 +839,11 @@
             </div>
           </nav>
         </div>
+
+        <button id="cookie-settings-btn" class="btn btn-secondary">
+  Cookie Settings
+</button>
+
         <div class="footer-bottom">
           <p>© <span id="year"></span> SentiraX. All rights reserved.</p>
         </div>
@@ -2203,6 +2257,79 @@
       deferredInstallPrompt = null;
     });
   });
+    
+    //===COOKIES===
+    (function () {
+  const banner = document.getElementById("cookie-banner");
+  const acceptBtn = document.getElementById("cookie-accept-btn");
+  const rejectBtn = document.getElementById("cookie-reject-btn");
+
+  const modal = document.getElementById("cookie-modal");
+  const settingsBtn = document.getElementById("cookie-settings-btn");
+  const saveBtn = document.getElementById("cookie-save-btn");
+  const cancelBtn = document.getElementById("cookie-cancel-btn");
+
+  const analyticsBox = document.getElementById("analyticsCookies");
+  const adsBox = document.getElementById("adCookies");
+
+  const CONSENT_KEY = "sentirax_cookie_consent";
+
+  // Load previous consent
+  const savedConsent = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
+
+  // Show banner only if no choice yet
+  if (!savedConsent.choice) {
+    banner.classList.remove("hidden");
+  }
+
+  // Accept all cookies
+  acceptBtn.addEventListener("click", () => {
+    const consent = {
+      choice: "accepted",
+      analytics: true,
+      ads: true
+    };
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    banner.classList.add("hidden");
+  });
+
+  // Reject all optional cookies
+  rejectBtn.addEventListener("click", () => {
+    const consent = {
+      choice: "rejected",
+      analytics: false,
+      ads: false
+    };
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    banner.classList.add("hidden");
+  });
+
+  // Open modal
+  settingsBtn.addEventListener("click", () => {
+    // Load current settings into checkboxes
+    analyticsBox.checked = !!savedConsent.analytics;
+    adsBox.checked = !!savedConsent.ads;
+    modal.classList.remove("hidden");
+  });
+
+  // Save modal preferences
+  saveBtn.addEventListener("click", () => {
+    const consent = {
+      choice: "custom",
+      analytics: analyticsBox.checked,
+      ads: adsBox.checked
+    };
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    modal.classList.add("hidden");
+  });
+
+  // Cancel modal
+  cancelBtn.addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+})();
+
+    
 </script>
 
   
@@ -2247,6 +2374,46 @@
   </div>
 </div>
     <div id="wikiFullscreenText" style="flex:1;overflow:auto;border:1px solid var(--border-subtle);border-radius:10px;padding:0.75rem;background:#020617;font-size:0.85rem;"></div>
+  </div>
+</div>
+
+  <div id="cookie-banner" class="cookie-banner hidden">
+  <div class="cookie-content">
+    <p>
+      SentiraX uses cookies and third-party services (such as Google AdSense) to
+      personalize ads, analyze traffic, and improve your experience.
+      By using this site, you agree to our
+      <a href="/privacy.html" target="_blank">Privacy Policy</a>.
+    </p>
+    <button id="cookie-reject-btn" class="reject">Reject</button>
+    <button id="cookie-accept-btn">Got it</button>
+  </div>
+</div>
+
+<div id="cookie-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width: 500px;">
+    <h3 style="margin-bottom: .8rem;">Cookie Preferences</h3>
+
+    <p class="small-text">
+      You can manage your cookie preferences below. Essential cookies are required for the website to function.
+    </p>
+
+    <div style="margin-top: 1rem;">
+      <label style="display:flex;align-items:center;gap:.6rem;">
+        <input type="checkbox" id="analyticsCookies">
+        <span>Analytics Cookies (optional)</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
+        <input type="checkbox" id="adCookies">
+        <span>Personalized Ads Cookies (optional)</span>
+      </label>
+    </div>
+
+    <div style="margin-top:1.4rem;display:flex;gap:.7rem;">
+      <button class="btn btn-secondary" id="cookie-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="cookie-save-btn">Save Preferences</button>
+    </div>
   </div>
 </div>
 
