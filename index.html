@@ -2260,70 +2260,65 @@
     
     //===COOKIES===
     (function () {
+  const CONSENT_KEY = "sentirax_cookie_consent";
+
   const banner = document.getElementById("cookie-banner");
   const acceptBtn = document.getElementById("cookie-accept-btn");
   const rejectBtn = document.getElementById("cookie-reject-btn");
+  const settingsBtn = document.getElementById("cookie-settings-btn");
 
   const modal = document.getElementById("cookie-modal");
-  const settingsBtn = document.getElementById("cookie-settings-btn");
   const saveBtn = document.getElementById("cookie-save-btn");
   const cancelBtn = document.getElementById("cookie-cancel-btn");
 
   const analyticsBox = document.getElementById("analyticsCookies");
   const adsBox = document.getElementById("adCookies");
 
-  const CONSENT_KEY = "sentirax_cookie_consent";
+  const saved = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
 
-  // Load previous consent
-  const savedConsent = JSON.parse(localStorage.getItem(CONSENT_KEY) || "{}");
-
-  // Show banner only if no choice yet
-  if (!savedConsent.choice) {
+  // show banner if no prior choice
+  if (!saved.choice) {
     banner.classList.remove("hidden");
   }
 
-  // Accept all cookies
+  // ACCEPT ALL
   acceptBtn.addEventListener("click", () => {
-    const consent = {
+    localStorage.setItem(CONSENT_KEY, JSON.stringify({
       choice: "accepted",
       analytics: true,
       ads: true
-    };
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    }));
     banner.classList.add("hidden");
   });
 
-  // Reject all optional cookies
+  // REJECT ALL
   rejectBtn.addEventListener("click", () => {
-    const consent = {
+    localStorage.setItem(CONSENT_KEY, JSON.stringify({
       choice: "rejected",
       analytics: false,
       ads: false
-    };
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    }));
     banner.classList.add("hidden");
   });
 
-  // Open modal
+  // OPEN SETTINGS
   settingsBtn.addEventListener("click", () => {
-    // Load current settings into checkboxes
-    analyticsBox.checked = !!savedConsent.analytics;
-    adsBox.checked = !!savedConsent.ads;
+    analyticsBox.checked = !!saved.analytics;
+    adsBox.checked = !!saved.ads;
     modal.classList.remove("hidden");
   });
 
-  // Save modal preferences
+  // SAVE SETTINGS
   saveBtn.addEventListener("click", () => {
-    const consent = {
+    localStorage.setItem(CONSENT_KEY, JSON.stringify({
       choice: "custom",
       analytics: analyticsBox.checked,
       ads: adsBox.checked
-    };
-    localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+    }));
     modal.classList.add("hidden");
   });
 
-  // Cancel modal
+  // CANCEL SETTINGS
   cancelBtn.addEventListener("click", () => {
     modal.classList.add("hidden");
   });
@@ -2416,6 +2411,50 @@
     </div>
   </div>
 </div>
+
+  <div id="cookie-banner" class="card hidden" 
+     style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            max-width: 520px; width: 90%; z-index: 9999;">
+
+  <p class="small-text" style="margin-bottom: .8rem;">
+    We use cookies to improve your experience and show personalized ads. 
+    You can accept, reject, or customize your choices.
+  </p>
+
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+    <button id="cookie-accept-btn" class="btn btn-primary" style="flex:1;">Accept</button>
+    <button id="cookie-reject-btn" class="btn btn-secondary" style="flex:1;">Reject</button>
+    <button id="cookie-settings-btn" class="btn btn-secondary" style="flex:1;">Settings</button>
+  </div>
+</div>
+
+  <div id="cookie-modal" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width: 480px; width: 95%;">
+    <h3 style="margin-bottom: .8rem;">Cookie Preferences</h3>
+
+    <p class="small-text">
+      Choose which types of cookies you want to allow. You can change this anytime.
+    </p>
+
+    <div style="margin-top:1rem;">
+      <label style="display:flex;align-items:center;gap:.6rem;">
+        <input type="checkbox" id="analyticsCookies">
+        <span>Allow Analytics Cookies</span>
+      </label>
+
+      <label style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;">
+        <input type="checkbox" id="adCookies">
+        <span>Allow Personalized Ads</span>
+      </label>
+    </div>
+
+    <div style="margin-top:1.3rem;display:flex;gap:.7rem;">
+      <button id="cookie-cancel-btn" class="btn btn-secondary" style="flex:1;">Cancel</button>
+      <button id="cookie-save-btn" class="btn btn-primary" style="flex:1;">Save</button>
+    </div>
+  </div>
+</div>
+
 
 
 </body>
