@@ -450,6 +450,11 @@
       border-color: rgba(34,197,94,0.5);
       color: #bbf7d0;
     }
+    .badge-watched {
+      background: rgba(34,197,94,0.15);
+      border-color: rgba(34,197,94,0.5);
+      color: #bbf7d0;
+    }
     .reason-text,
     .summary-text {
       font-size: 0.85rem;
@@ -909,13 +914,14 @@
       } catch {}
     },
     clearAll() {
-      ["user_profile", "watchlist", "checkins"].forEach(k => Storage.remove(k));
+      ["user_profile", "watchlist", "checkins", "watched", "trakt_auth"].forEach(k => Storage.remove(k));
     }
   };
 
   const AppState = {
     user: null,
     watchlist: [],
+    watched: [],
     checkins: [],
     currentView: "welcome",
     lastCheckIn: null,
@@ -929,11 +935,17 @@
       type: "any",
       year: ""
     },
+    traktAuth: null,
+    traktDevice: null,
+    detailBackView: "recommendations",
+    detailBackLabel: "Back to picks",
 
     init() {
       this.user = Storage.get("user_profile", null);
       this.watchlist = Storage.get("watchlist", []);
+      this.watched = Storage.get("watched", []);
       this.checkins = Storage.get("checkins", []);
+      this.traktAuth = Storage.get("trakt_auth", null);
       if (this.user) this.currentView = "check-in";
     },
 
@@ -949,7 +961,10 @@
     },
 
     addToWatchlist(item) {
-      if (!this.watchlist.find(x => x.id === item.id)) {
+      if (!this.watchlist.find(x =>
+        x.id === item.id ||
+        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+      )) {
         this.watchlist.push(item);
         Storage.set("watchlist", this.watchlist);
       }
@@ -960,9 +975,52 @@
       Storage.set("watchlist", this.watchlist);
     },
 
+    addToWatched(item) {
+      const now = new Date().toISOString();
+      const existing = this.watched.find(x =>
+        x.id === item.id ||
+        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+      );
+      if (existing) {
+        Object.assign(existing, item);
+        if (!existing.watched_at) existing.watched_at = now;
+        Storage.set("watched", this.watched);
+        return;
+      }
+      const entry = { ...item };
+      if (!entry.watched_at) entry.watched_at = now;
+      this.watched.push(entry);
+      Storage.set("watched", this.watched);
+    },
+
+    removeFromWatched(id, tmdbId = null, type = null) {
+      this.watched = this.watched.filter(x =>
+        x.id !== id &&
+        !(tmdbId && x.tmdb_id && x.tmdb_id === tmdbId && (!type || x.type === type))
+      );
+      Storage.set("watched", this.watched);
+    },
+
+    isWatched(id, tmdbId = null, type = null) {
+      return this.watched.some(x =>
+        x.id === id ||
+        (tmdbId && x.tmdb_id && x.tmdb_id === tmdbId && (!type || x.type === type))
+      );
+    },
+
+    isTraktConnected() {
+      if (!this.traktAuth || !this.traktAuth.access_token) return false;
+      if (!this.traktAuth.expires_at) return true;
+      if (Date.now() < this.traktAuth.expires_at) return true;
+      this.traktAuth = null;
+      Storage.remove("trakt_auth");
+      return false;
+    },
+
     reset() {
       this.user = null;
       this.watchlist = [];
+      this.watched = [];
       this.checkins = [];
       this.currentView = "welcome";
       this.recommendations = [];
@@ -970,6 +1028,10 @@
       this.detailsCache = {};
       this.searchResults = [];
       this.lastSearch = { query: "", type: "any", year: "" };
+      this.traktAuth = null;
+      this.traktDevice = null;
+      this.detailBackView = "recommendations";
+      this.detailBackLabel = "Back to picks";
       Storage.clearAll();
     }
   };
@@ -1014,7 +1076,13 @@
           Views.initSearch();
           break;
         case "detail":
-          main.innerHTML = Views.detail(data.title, data.backView, data.backLabel);
+          if (data.backView) AppState.detailBackView = data.backView;
+          if (data.backLabel) AppState.detailBackLabel = data.backLabel;
+          main.innerHTML = Views.detail(
+            data.title,
+            AppState.detailBackView,
+            AppState.detailBackLabel
+          );
           Views.initDetail(data.title);
           break;
         case "watchlist":
@@ -1023,6 +1091,7 @@
           break;
         case "settings":
           main.innerHTML = Views.settings();
+          Views.initSettings();
           break;
         default:
           main.innerHTML = "<p>View not found</p>";
@@ -1035,6 +1104,7 @@
     // ---- Wikipedia fullscreen navigation state ----
     _wikiHistory: [],
     _wikiHistoryIndex: 0,
+    _traktPollerId: null,
 
     welcome() {
       return `
@@ -1435,6 +1505,8 @@
         const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
         const type = r.type === "show" ? "Series" : "Movie";
         const year = r.release_year || r.year || null;
+        const isWatched = AppState.isWatched(r.id, r.tmdb_id, r.type);
+        const watchedLabel = isWatched ? "✅" : "👁️";
         const posterUrl = r.poster_path
           ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
           : null;
@@ -1458,11 +1530,17 @@
           ${runtime ? `<span class="badge">${runtime}</span>` : ""}
           ${genres.map(g => `<span class="badge">${g}</span>`).join("")}
           ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+          ${isWatched ? `<span class="badge badge-watched">Watched</span>` : ""}
         </div>
       </div>
-      <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-        ⭐
-      </button>
+      <div style="display:flex;gap:.3rem;">
+        <button class="btn-ghost watched-toggle" data-id="${r.id}" aria-label="Toggle watched">
+          ${watchedLabel}
+        </button>
+        <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+          ⭐
+        </button>
+      </div>
     </div>
     ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
     ${r.reason ? `<p class="reason-text"><b>Why SentiraX picked this:</b> ${r.reason}</p>` : ""}
@@ -1486,7 +1564,20 @@
           const obj = AppState.recommendations.find(r => String(r.id) === String(id));
           if (!obj) return;
           AppState.selectedTitle = obj;
-          Router.navigate("detail", { title: obj });
+          Router.navigate("detail", {
+            title: obj,
+            backView: "recommendations",
+            backLabel: "Back to picks"
+          });
+        });
+      });
+
+      // watched toggles
+      c.querySelectorAll(".watched-toggle").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          Views.toggleWatched(id);
         });
       });
 
@@ -1660,6 +1751,8 @@
         const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : null;
         const type = r.type === "show" ? "Series" : "Movie";
         const year = r.release_year || r.year || null;
+        const isWatched = AppState.isWatched(r.id, r.tmdb_id, r.type);
+        const watchedLabel = isWatched ? "✅" : "👁️";
         const posterUrl = r.poster_path
           ? `https://image.tmdb.org/t/p/w342${r.poster_path}`
           : null;
@@ -1682,11 +1775,17 @@
           ${year ? `<span class="badge">${year}</span>` : ""}
           ${runtime ? `<span class="badge">${runtime}</span>` : ""}
           ${r.is_adult ? `<span class="badge badge-18">18+</span>` : ""}
+          ${isWatched ? `<span class="badge badge-watched">Watched</span>` : ""}
         </div>
       </div>
-      <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
-        ⭐
-      </button>
+      <div style="display:flex;gap:.3rem;">
+        <button class="btn-ghost watched-toggle" data-id="${r.id}" aria-label="Toggle watched">
+          ${watchedLabel}
+        </button>
+        <button class="btn-ghost watchlist-toggle" data-id="${r.id}" aria-label="Toggle watchlist">
+          ⭐
+        </button>
+      </div>
     </div>
     ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
   </div>
@@ -1714,6 +1813,14 @@
         });
       });
 
+      container.querySelectorAll(".watched-toggle").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          Views.toggleWatched(id);
+        });
+      });
+
       container.querySelectorAll(".watchlist-toggle").forEach(btn => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1729,14 +1836,44 @@
         AppState.searchResults.find(r => r.id === id) ||
         AppState.watchlist.find(r => r.id === id);
       if (!item) return;
-      const exists = AppState.watchlist.find(r => r.id === id);
+      const exists = AppState.watchlist.find(r =>
+        r.id === id ||
+        (item.tmdb_id && r.tmdb_id === item.tmdb_id && r.type === item.type)
+      );
       if (exists) {
-        AppState.removeFromWatchlist(id);
+        AppState.removeFromWatchlist(exists.id);
         Views.showToast("Removed from watchlist");
       } else {
         AppState.addToWatchlist(item);
         Views.showToast("Added to watchlist");
       }
+    },
+
+    toggleWatched(id) {
+      const item =
+        AppState.recommendations.find(r => r.id === id) ||
+        AppState.searchResults.find(r => r.id === id) ||
+        AppState.watchlist.find(r => r.id === id) ||
+        AppState.watched.find(r => r.id === id);
+      if (!item) return;
+      const exists = AppState.isWatched(id, item.tmdb_id, item.type);
+      if (exists) {
+        AppState.removeFromWatched(id, item.tmdb_id, item.type);
+        Views.showToast("Marked as unwatched");
+      } else {
+        AppState.addToWatched(item);
+        Views.showToast("Marked as watched");
+      }
+
+      if (AppState.currentView === "detail" && AppState.selectedTitle) {
+        Router.navigate("detail", {
+          title: AppState.selectedTitle,
+          backView: AppState.detailBackView,
+          backLabel: AppState.detailBackLabel
+        });
+        return;
+      }
+      Router.navigate(AppState.currentView);
     },
 
     detail(title, backView = "recommendations", backLabel = "Back to picks") {
@@ -1745,6 +1882,7 @@
       const genres = (title.genres || []).join(", ");
       const runtime = title.runtime_minutes ? `${title.runtime_minutes} min` : null;
       const year = title.release_year || title.year || null;
+      const isWatched = AppState.isWatched(title.id, title.tmdb_id, title.type);
 
       const posterUrl = title.poster_path
         ? `https://image.tmdb.org/t/p/w500${title.poster_path}`
@@ -1770,6 +1908,7 @@
               ${genres ? " • " + genres : ""}
               ${runtime ? " • " + runtime : ""}
               ${title.is_adult ? ' • <span class="badge badge-18">18+</span>' : ""}
+              ${isWatched ? ' • <span class="badge badge-watched">Watched</span>' : ""}
             </p>
             <p class="small-text" style="margin-top:.8rem;">
               ${title.summary || "Plot summary will appear once details load."}
@@ -1783,6 +1922,9 @@
             <div style="margin-top:1rem;display:flex;gap:.6rem;flex-wrap:wrap;">
               <button class="btn btn-secondary" id="detailWatchlistBtn">
                 ☆ Add to watchlist
+              </button>
+              <button class="btn btn-secondary" id="detailWatchedBtn">
+                👁️ Mark as watched
               </button>
               <button class="btn btn-secondary" id="wikiDetailsBtn">
                 📖 See full details (Wikipedia)
@@ -1798,6 +1940,7 @@
     async initDetail(title) {
       // Watchlist button
       Views.setupDetailWatchlist(title);
+      Views.setupDetailWatched(title);
 
       // Wikipedia button
       const wikiBtn = document.getElementById("wikiDetailsBtn");
@@ -1838,6 +1981,27 @@
       } catch (e) {
         container.innerHTML = `<p class="small-text">Error loading details: ${e.message || e}</p>`;
       }
+    },
+
+    setupDetailWatched(title) {
+      const btn = document.getElementById("detailWatchedBtn");
+      if (!btn) return;
+
+      const isWatched = AppState.isWatched(title.id, title.tmdb_id, title.type);
+      btn.textContent = isWatched ? "✅ Watched" : "👁️ Mark as watched";
+
+      btn.addEventListener("click", () => {
+        const exists = AppState.isWatched(title.id, title.tmdb_id, title.type);
+        if (exists) {
+          AppState.removeFromWatched(title.id, title.tmdb_id, title.type);
+          btn.textContent = "👁️ Mark as watched";
+          Views.showToast("Marked as unwatched");
+        } else {
+          AppState.addToWatched(title);
+          btn.textContent = "✅ Watched";
+          Views.showToast("Marked as watched");
+        }
+      });
     },
 
     async fetchWikiDetails(title) {
@@ -2118,7 +2282,8 @@
 
     watchlist() {
       const list = AppState.watchlist;
-      if (!list.length) {
+      const watched = AppState.watched;
+      if (!list.length && !watched.length) {
         return `
           <div class="center-block" style="text-align:center;padding:2.4rem 0;">
             <div style="font-size:3rem;margin-bottom:.7rem;">📺</div>
@@ -2135,6 +2300,8 @@
         const genresStr = (r.genres || []).slice(0, 3).join(", ");
         const runtime = r.runtime_minutes ? `${r.runtime_minutes} min` : "";
         const year = r.release_year || r.year || "";
+        const isWatched = AppState.isWatched(r.id, r.tmdb_id, r.type);
+        const watchedLabel = isWatched ? "✅" : "👁️";
 
         return `
           <div class="title-card" data-id="${r.id}">
@@ -2146,13 +2313,47 @@
                   ${year ? `<span class="badge">${year}</span>` : ""}
                   ${runtime ? `<span class="badge">${runtime}</span>` : ""}
                   ${genresStr ? `<span class="badge">${genresStr}</span>` : ""}
+                  ${isWatched ? `<span class="badge badge-watched">Watched</span>` : ""}
                 </div>
               </div>
-              <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
-                🗑️
-              </button>
+              <div style="display:flex;gap:.3rem;">
+                <button class="btn-ghost watched-toggle" data-id="${r.id}" aria-label="Toggle watched">
+                  ${watchedLabel}
+                </button>
+                <button class="btn-ghost watchlist-remove" data-id="${r.id}" aria-label="Remove from watchlist">
+                  🗑️
+                </button>
+              </div>
             </div>
             ${r.summary ? `<p class="summary-text">${r.summary}</p>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      const watchedItems = watched.map(r => {
+        const name = r.name || r.title || "Untitled";
+        const type = r.type === "show" ? "Series" : "Movie";
+        const year = r.release_year || r.year || "";
+        const watchedAt = r.watched_at
+          ? new Date(r.watched_at).toLocaleDateString()
+          : "";
+
+        return `
+          <div class="title-card" data-id="${r.id}">
+            <div class="title-header">
+              <div class="title-main">
+                <div class="title-name">${name}</div>
+                <div class="badge-row">
+                  <span class="badge badge-type">${type}</span>
+                  ${year ? `<span class="badge">${year}</span>` : ""}
+                  <span class="badge badge-watched">Watched</span>
+                </div>
+              </div>
+              <button class="btn-ghost watched-toggle" data-id="${r.id}" aria-label="Toggle watched">
+                ✅
+              </button>
+            </div>
+            ${watchedAt ? `<p class="summary-text">Watched: ${watchedAt}</p>` : ""}
           </div>
         `;
       }).join("");
@@ -2161,7 +2362,11 @@
         <div class="center-block">
           <h2 class="responsive-heading" style="margin-bottom:1rem;">My watchlist</h2>
           <div class="card">
-            ${items}
+            ${items || `<p class="small-text">No items in watchlist yet.</p>`}
+          </div>
+          <h2 class="responsive-heading" style="margin:1.6rem 0 1rem;">Watched</h2>
+          <div class="card">
+            ${watchedItems || `<p class="small-text">No watched items yet.</p>`}
           </div>
         </div>
       `;
@@ -2174,10 +2379,23 @@
           if (!id) return;
           const obj =
             AppState.watchlist.find(r => String(r.id) === String(id)) ||
+            AppState.watched.find(r => String(r.id) === String(id)) ||
             AppState.recommendations.find(r => String(r.id) === String(id));
           if (!obj) return;
           AppState.selectedTitle = obj;
-          Router.navigate("detail", { title: obj });
+          Router.navigate("detail", {
+            title: obj,
+            backView: "watchlist",
+            backLabel: "Back to watchlist"
+          });
+        });
+      });
+
+      document.querySelectorAll(".watched-toggle").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          Views.toggleWatched(id);
         });
       });
 
@@ -2194,6 +2412,240 @@
       AppState.removeFromWatchlist(id);
       Views.showToast("Removed from watchlist");
       Router.navigate("watchlist");
+    },
+
+    initSettings() {
+      const connectBtn = document.getElementById("traktConnectBtn");
+      const disconnectBtn = document.getElementById("traktDisconnectBtn");
+      const syncBtn = document.getElementById("traktSyncBtn");
+      const importBtn = document.getElementById("traktImportBtn");
+
+      if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
+      if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
+      if (syncBtn) syncBtn.addEventListener("click", () => Views.syncWatchedToTrakt());
+      if (importBtn) importBtn.addEventListener("click", () => Views.importWatchedFromTrakt());
+
+      Views.renderTraktUi();
+    },
+
+    renderTraktUi() {
+      const statusEl = document.getElementById("traktStatus");
+      const connectBtn = document.getElementById("traktConnectBtn");
+      const disconnectBtn = document.getElementById("traktDisconnectBtn");
+      const syncBtn = document.getElementById("traktSyncBtn");
+      const importBtn = document.getElementById("traktImportBtn");
+      const deviceBox = document.getElementById("traktDeviceBox");
+      const userCodeEl = document.getElementById("traktUserCode");
+      const urlEl = document.getElementById("traktVerificationUrl");
+
+      const connected = AppState.isTraktConnected();
+      if (statusEl) {
+        statusEl.textContent = connected ? "Connected to Trakt." : "Not connected to Trakt yet.";
+      }
+
+      if (connectBtn) connectBtn.style.display = connected ? "none" : "inline-flex";
+      if (disconnectBtn) disconnectBtn.style.display = connected ? "inline-flex" : "none";
+      if (syncBtn) syncBtn.style.display = connected ? "inline-flex" : "none";
+      if (importBtn) importBtn.style.display = connected ? "inline-flex" : "none";
+
+      if (deviceBox) {
+        const device = AppState.traktDevice;
+        const isActive = device && device.expires_at && Date.now() < device.expires_at;
+        deviceBox.classList.toggle("hidden", !isActive);
+        if (isActive && userCodeEl && urlEl) {
+          userCodeEl.textContent = device.user_code;
+          urlEl.href = device.verification_url;
+          urlEl.textContent = device.verification_url;
+        }
+      }
+    },
+
+    async startTraktConnect() {
+      const messageEl = document.getElementById("traktMessage");
+      if (messageEl) messageEl.textContent = "Requesting Trakt device code...";
+
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/device/code");
+        const json = await res.json();
+        if (!res.ok) {
+          if (messageEl) messageEl.textContent = json.error || "Failed to get Trakt device code.";
+          return;
+        }
+
+        AppState.traktDevice = {
+          device_code: json.device_code,
+          user_code: json.user_code,
+          verification_url: json.verification_url,
+          expires_at: Date.now() + (json.expires_in || 0) * 1000,
+          interval: json.interval || 5
+        };
+
+        if (messageEl) messageEl.textContent = "Authorize SentiraX on Trakt using the code below.";
+        Views.renderTraktUi();
+
+        if (json.verification_url) {
+          window.open(json.verification_url, "_blank", "noopener,noreferrer");
+        }
+
+        Views.startTraktPolling();
+      } catch (e) {
+        if (messageEl) messageEl.textContent = `Trakt error: ${e.message || e}`;
+      }
+    },
+
+    startTraktPolling() {
+      if (!AppState.traktDevice) return;
+
+      if (Views._traktPollerId) {
+        clearInterval(Views._traktPollerId);
+        Views._traktPollerId = null;
+      }
+
+      let intervalMs = (AppState.traktDevice.interval || 5) * 1000;
+
+      Views._traktPollerId = setInterval(async () => {
+        try {
+          const res = await fetch(BACKEND_BASE_URL + "/api/trakt/device/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ device_code: AppState.traktDevice.device_code })
+          });
+          const json = await res.json();
+
+          if (res.ok && json.access_token) {
+            clearInterval(Views._traktPollerId);
+            Views._traktPollerId = null;
+
+            AppState.traktAuth = {
+              access_token: json.access_token,
+              refresh_token: json.refresh_token,
+              token_type: json.token_type,
+              expires_at: Date.now() + (json.expires_in || 0) * 1000
+            };
+            Storage.set("trakt_auth", AppState.traktAuth);
+            AppState.traktDevice = null;
+
+            Views.showToast("Trakt connected");
+            Views.renderTraktUi();
+            const messageEl = document.getElementById("traktMessage");
+            if (messageEl) messageEl.textContent = "Trakt connected successfully.";
+            return;
+          }
+
+          const err = json && (json.error || json.message);
+          if (err === "authorization_pending" || err === "slow_down") {
+            if (err === "slow_down") {
+              intervalMs += 5000;
+              clearInterval(Views._traktPollerId);
+              Views._traktPollerId = null;
+              setTimeout(() => Views.startTraktPolling(), intervalMs);
+            }
+            return;
+          }
+
+          if (err) {
+            clearInterval(Views._traktPollerId);
+            Views._traktPollerId = null;
+            const messageEl = document.getElementById("traktMessage");
+            if (messageEl) messageEl.textContent = `Trakt auth failed: ${err}`;
+          }
+        } catch (e) {
+          clearInterval(Views._traktPollerId);
+          Views._traktPollerId = null;
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = `Trakt auth error: ${e.message || e}`;
+        }
+      }, intervalMs);
+    },
+
+    disconnectTrakt() {
+      AppState.traktAuth = null;
+      AppState.traktDevice = null;
+      Storage.remove("trakt_auth");
+      Views.renderTraktUi();
+      Views.showToast("Trakt disconnected");
+    },
+
+    async syncWatchedToTrakt() {
+      if (!AppState.isTraktConnected()) {
+        Views.showToast("Connect Trakt first");
+        return;
+      }
+
+      const token = AppState.traktAuth.access_token;
+      const items = (AppState.watched || []).filter(x => x.tmdb_id && x.type);
+      if (!items.length) {
+        Views.showToast("No watched items to sync");
+        return;
+      }
+
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/sync/history", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ items })
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          Views.showToast("Trakt sync failed");
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt sync failed.";
+          return;
+        }
+
+        Views.showToast("Synced watched to Trakt");
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = "Watched list synced to Trakt.";
+      } catch (e) {
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = `Trakt sync error: ${e.message || e}`;
+      }
+    },
+
+    async importWatchedFromTrakt() {
+      if (!AppState.isTraktConnected()) {
+        Views.showToast("Connect Trakt first");
+        return;
+      }
+
+      const token = AppState.traktAuth.access_token;
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/watched", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt import failed.";
+          Views.showToast("Trakt import failed");
+          return;
+        }
+
+        const items = json.items || [];
+        const byKey = new Map();
+        AppState.watched.forEach(item => {
+          const key = `${item.type}-${item.tmdb_id || item.id}`;
+          byKey.set(key, item);
+        });
+
+        items.forEach(item => {
+          const key = `${item.type}-${item.tmdb_id || item.id}`;
+          if (byKey.has(key)) return;
+          byKey.set(key, item);
+        });
+
+        AppState.watched = Array.from(byKey.values());
+        Storage.set("watched", AppState.watched);
+
+        Views.showToast("Imported watched from Trakt");
+        Views.renderTraktUi();
+      } catch (e) {
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = `Trakt import error: ${e.message || e}`;
+      }
     },
 
     settings() {
@@ -2216,6 +2668,27 @@
             <div class="section-label">Usage</div>
             <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
             <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
+            <p class="small-text"><strong>Watched items:</strong> ${AppState.watched.length}</p>
+          </div>
+          <div class="card">
+            <div class="section-label">Trakt</div>
+            <p class="small-text" id="traktStatus">
+              ${AppState.isTraktConnected() ? "Connected to Trakt." : "Not connected to Trakt yet."}
+            </p>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem;">
+              <button class="btn btn-secondary" id="traktConnectBtn">Connect Trakt</button>
+              <button class="btn btn-secondary" id="traktDisconnectBtn">Disconnect</button>
+              <button class="btn btn-secondary" id="traktSyncBtn">Sync watched to Trakt</button>
+              <button class="btn btn-secondary" id="traktImportBtn">Import watched from Trakt</button>
+            </div>
+            <div id="traktDeviceBox" class="small-text hidden" style="margin-top:.8rem;">
+              <div><strong>Enter code:</strong> <span id="traktUserCode"></span></div>
+              <div>
+                Visit <a id="traktVerificationUrl" href="#" target="_blank" rel="noopener noreferrer">trakt.tv/activate</a>
+                and enter the code above.
+              </div>
+            </div>
+            <div id="traktMessage" class="small-text" style="margin-top:.6rem;"></div>
           </div>
           <div class="card">
             <div class="section-label">Data</div>
@@ -2239,7 +2712,7 @@
     resetApp() {
       Views.showConfirm(
         "Reset SentiraX?",
-        "This clears your profile, watchlist, and mood history.",
+        "This clears your profile, watchlist, watched list, and mood history.",
         () => {
           AppState.reset();
           Router.navigate("welcome");
