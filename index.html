@@ -872,7 +872,7 @@
         </div>
         <div class="nav-item" data-view="watchlist">
           <span>📺</span>
-          <span>Watchlist</span>
+          <span>My Library</span>
         </div>
         <div class="nav-item" data-view="settings">
           <span>⚙️</span>
@@ -939,6 +939,8 @@
     traktDevice: null,
     detailBackView: "recommendations",
     detailBackLabel: "Back to picks",
+    lastExternal: null,
+    externalBlurred: false,
 
     init() {
       this.user = Storage.get("user_profile", null);
@@ -1032,6 +1034,8 @@
       this.traktDevice = null;
       this.detailBackView = "recommendations";
       this.detailBackLabel = "Back to picks";
+      this.lastExternal = null;
+      this.externalBlurred = false;
       Storage.clearAll();
     }
   };
@@ -1861,8 +1865,7 @@
         AppState.removeFromWatched(id, item.tmdb_id, item.type);
         Views.showToast("Marked as unwatched");
       } else {
-        AppState.addToWatched(item);
-        Views.showToast("Marked as watched");
+        Views.markWatchedWithSync(item);
       }
 
       if (AppState.currentView === "detail" && AppState.selectedTitle) {
@@ -1874,6 +1877,45 @@
         return;
       }
       Router.navigate(AppState.currentView);
+    },
+
+    async markWatchedWithSync(item, opts = {}) {
+      AppState.addToWatched(item);
+      if (opts.showToast !== false) {
+        Views.showToast("Marked as watched");
+      }
+      await Views.syncWatchedItemToTrakt(item);
+    },
+
+    async syncWatchedItemToTrakt(item) {
+      if (!AppState.isTraktConnected()) return;
+
+      const token = AppState.traktAuth.access_token;
+      const tracked = AppState.watched.find(x =>
+        x.id === item.id ||
+        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+      ) || item;
+
+      if (!tracked.tmdb_id || !tracked.type) return;
+
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/sync/history", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ items: [tracked] })
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}));
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt sync failed.";
+        }
+      } catch (e) {
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = `Trakt sync error: ${e.message || e}`;
+      }
     },
 
     detail(title, backView = "recommendations", backLabel = "Back to picks") {
@@ -1997,9 +2039,8 @@
           btn.textContent = "👁️ Mark as watched";
           Views.showToast("Marked as unwatched");
         } else {
-          AppState.addToWatched(title);
+          Views.markWatchedWithSync(title);
           btn.textContent = "✅ Watched";
-          Views.showToast("Marked as watched");
         }
       });
     },
@@ -2175,6 +2216,51 @@
         ${providersHtml}
         ${watchOnHtml}
       `;
+
+      Views.attachExternalLinkTracking(container, titleObj);
+    },
+
+    attachExternalLinkTracking(container, titleObj) {
+      if (!container || !titleObj) return;
+      const links = container.querySelectorAll("a[target=\"_blank\"]");
+      links.forEach(link => {
+        link.addEventListener("click", () => {
+          Views.trackExternalClick(titleObj);
+        });
+      });
+    },
+
+    trackExternalClick(titleObj) {
+      if (!titleObj) return;
+      AppState.lastExternal = {
+        item: { ...titleObj },
+        ts: Date.now(),
+        prompted: false
+      };
+      AppState.externalBlurred = false;
+    },
+
+    handleReturnFromExternal() {
+      const last = AppState.lastExternal;
+      if (!last || last.prompted || !last.item) return;
+      if (!AppState.externalBlurred) return;
+
+      const item = last.item;
+      if (AppState.isWatched(item.id, item.tmdb_id, item.type)) {
+        AppState.lastExternal = null;
+        AppState.externalBlurred = false;
+        return;
+      }
+
+      AppState.lastExternal = null;
+      AppState.externalBlurred = false;
+
+      const name = item.name || item.title || "this title";
+      Views.showConfirm(
+        "Mark as watched?",
+        `Did you watch "${name}"?`,
+        () => Views.markWatchedWithSync(item)
+      );
     },
 
     buildProviderUrl(providerName, title) {
@@ -2419,11 +2505,13 @@
       const disconnectBtn = document.getElementById("traktDisconnectBtn");
       const syncBtn = document.getElementById("traktSyncBtn");
       const importBtn = document.getElementById("traktImportBtn");
+      const importWatchlistBtn = document.getElementById("traktImportWatchlistBtn");
 
       if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
       if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
       if (syncBtn) syncBtn.addEventListener("click", () => Views.syncWatchedToTrakt());
       if (importBtn) importBtn.addEventListener("click", () => Views.importWatchedFromTrakt());
+      if (importWatchlistBtn) importWatchlistBtn.addEventListener("click", () => Views.importWatchlistFromTrakt());
 
       Views.renderTraktUi();
     },
@@ -2434,6 +2522,7 @@
       const disconnectBtn = document.getElementById("traktDisconnectBtn");
       const syncBtn = document.getElementById("traktSyncBtn");
       const importBtn = document.getElementById("traktImportBtn");
+      const importWatchlistBtn = document.getElementById("traktImportWatchlistBtn");
       const deviceBox = document.getElementById("traktDeviceBox");
       const userCodeEl = document.getElementById("traktUserCode");
       const urlEl = document.getElementById("traktVerificationUrl");
@@ -2447,6 +2536,7 @@
       if (disconnectBtn) disconnectBtn.style.display = connected ? "inline-flex" : "none";
       if (syncBtn) syncBtn.style.display = connected ? "inline-flex" : "none";
       if (importBtn) importBtn.style.display = connected ? "inline-flex" : "none";
+      if (importWatchlistBtn) importWatchlistBtn.style.display = connected ? "inline-flex" : "none";
 
       if (deviceBox) {
         const device = AppState.traktDevice;
@@ -2648,6 +2738,49 @@
       }
     },
 
+    async importWatchlistFromTrakt() {
+      if (!AppState.isTraktConnected()) {
+        Views.showToast("Connect Trakt first");
+        return;
+      }
+
+      const token = AppState.traktAuth.access_token;
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/watchlist", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt watchlist import failed.";
+          Views.showToast("Trakt watchlist import failed");
+          return;
+        }
+
+        const items = json.items || [];
+        const byKey = new Map();
+        AppState.watchlist.forEach(item => {
+          const key = `${item.type}-${item.tmdb_id || item.id}`;
+          byKey.set(key, item);
+        });
+
+        items.forEach(item => {
+          const key = `${item.type}-${item.tmdb_id || item.id}`;
+          if (byKey.has(key)) return;
+          byKey.set(key, item);
+        });
+
+        AppState.watchlist = Array.from(byKey.values());
+        Storage.set("watchlist", AppState.watchlist);
+
+        Views.showToast("Imported watchlist from Trakt");
+        Views.renderTraktUi();
+      } catch (e) {
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = `Trakt watchlist import error: ${e.message || e}`;
+      }
+    },
+
     settings() {
       const user = AppState.user;
       return `
@@ -2680,6 +2813,7 @@
               <button class="btn btn-secondary" id="traktDisconnectBtn">Disconnect</button>
               <button class="btn btn-secondary" id="traktSyncBtn">Sync watched to Trakt</button>
               <button class="btn btn-secondary" id="traktImportBtn">Import watched from Trakt</button>
+              <button class="btn btn-secondary" id="traktImportWatchlistBtn">Import watchlist from Trakt</button>
             </div>
             <div id="traktDeviceBox" class="small-text hidden" style="margin-top:.8rem;">
               <div><strong>Enter code:</strong> <span id="traktUserCode"></span></div>
@@ -2929,6 +3063,22 @@
     });
     AppState.init();
     Router.navigate(AppState.currentView);
+  });
+
+  window.addEventListener("blur", () => {
+    if (AppState.lastExternal) {
+      AppState.externalBlurred = true;
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    Views.handleReturnFromExternal();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      Views.handleReturnFromExternal();
+    }
   });
 
   // PWA service worker
