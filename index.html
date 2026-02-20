@@ -53,6 +53,7 @@
   <script src="https://3nbf4.com/act/files/tag.min.js?z=10584820" data-cfasync="false" async></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
   <style>
     :root {
@@ -955,6 +956,8 @@
     externalBlurred: false,
     firebaseUser: null,
     firebaseAuth: null,
+    firebaseDb: null,
+    firestoreLoaded: false,
 
     init() {
       this.user = Storage.get("user_profile", null);
@@ -968,6 +971,9 @@
     saveUser(profile) {
       this.user = profile;
       Storage.set("user_profile", profile);
+      if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+        Views.scheduleFirestoreSave();
+      }
     },
 
     saveCheckIn(checkIn) {
@@ -983,12 +989,18 @@
       )) {
         this.watchlist.push(item);
         Storage.set("watchlist", this.watchlist);
+        if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+          Views.scheduleFirestoreSave();
+        }
       }
     },
 
     removeFromWatchlist(id) {
       this.watchlist = this.watchlist.filter(x => x.id !== id);
       Storage.set("watchlist", this.watchlist);
+      if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+        Views.scheduleFirestoreSave();
+      }
     },
 
     addToWatched(item) {
@@ -1001,12 +1013,18 @@
         Object.assign(existing, item);
         if (!existing.watched_at) existing.watched_at = now;
         Storage.set("watched", this.watched);
+        if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+          Views.scheduleFirestoreSave();
+        }
         return;
       }
       const entry = { ...item };
       if (!entry.watched_at) entry.watched_at = now;
       this.watched.push(entry);
       Storage.set("watched", this.watched);
+      if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+        Views.scheduleFirestoreSave();
+      }
     },
 
     removeFromWatched(id, tmdbId = null, type = null) {
@@ -1015,6 +1033,9 @@
         !(tmdbId && x.tmdb_id && x.tmdb_id === tmdbId && (!type || x.type === type))
       );
       Storage.set("watched", this.watched);
+      if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+        Views.scheduleFirestoreSave();
+      }
     },
 
     isWatched(id, tmdbId = null, type = null) {
@@ -1052,6 +1073,8 @@
       this.externalBlurred = false;
       this.firebaseUser = null;
       this.firebaseAuth = null;
+      this.firebaseDb = null;
+      this.firestoreLoaded = false;
       Storage.clearAll();
     }
   };
@@ -1125,6 +1148,7 @@
     _wikiHistory: [],
     _wikiHistoryIndex: 0,
     _traktPollerId: null,
+    _firestoreSaveTimer: null,
 
     initFirebase() {
       if (!window.firebase || !firebaseConfig) return;
@@ -1132,8 +1156,13 @@
         firebase.initializeApp(firebaseConfig);
       }
       AppState.firebaseAuth = firebase.auth();
+      AppState.firebaseDb = firebase.firestore();
       AppState.firebaseAuth.onAuthStateChanged((user) => {
         AppState.firebaseUser = user || null;
+        AppState.firestoreLoaded = false;
+        if (user) {
+          Views.loadUserDataFromFirestore();
+        }
         Views.renderAuthUi();
       });
     },
@@ -1240,6 +1269,78 @@
         Views.showToast("Signed in anonymously");
       } catch (e) {
         if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    mergeByKey(localList, remoteList) {
+      const byKey = new Map();
+      (localList || []).forEach(item => {
+        const key = `${item.type || "item"}-${item.tmdb_id || item.id}`;
+        byKey.set(key, item);
+      });
+      (remoteList || []).forEach(item => {
+        const key = `${item.type || "item"}-${item.tmdb_id || item.id}`;
+        if (!byKey.has(key)) byKey.set(key, item);
+      });
+      return Array.from(byKey.values());
+    },
+
+    async loadUserDataFromFirestore() {
+      if (!AppState.firebaseUser || !AppState.firebaseDb) return;
+      try {
+        const ref = AppState.firebaseDb.collection("users").doc(AppState.firebaseUser.uid);
+        const snap = await ref.get();
+        if (snap.exists) {
+          const data = snap.data() || {};
+          if (data.user_profile) {
+            AppState.user = data.user_profile;
+            Storage.set("user_profile", data.user_profile);
+          }
+          if (Array.isArray(data.watchlist)) {
+            AppState.watchlist = Views.mergeByKey(AppState.watchlist, data.watchlist);
+            Storage.set("watchlist", AppState.watchlist);
+          }
+          if (Array.isArray(data.watched)) {
+            AppState.watched = Views.mergeByKey(AppState.watched, data.watched);
+            Storage.set("watched", AppState.watched);
+          }
+        } else {
+          await Views.saveUserDataToFirestore(true);
+        }
+
+        AppState.firestoreLoaded = true;
+        Router.navigate(AppState.currentView);
+      } catch (e) {
+        const messageEl = document.getElementById("authMessage");
+        if (messageEl) messageEl.textContent = `Firestore load error: ${e.message || e}`;
+      }
+    },
+
+    scheduleFirestoreSave() {
+      if (!AppState.firebaseUser || !AppState.firebaseDb || !AppState.firestoreLoaded) return;
+      if (Views._firestoreSaveTimer) {
+        clearTimeout(Views._firestoreSaveTimer);
+      }
+      Views._firestoreSaveTimer = setTimeout(() => {
+        Views.saveUserDataToFirestore();
+      }, 800);
+    },
+
+    async saveUserDataToFirestore(force = false) {
+      if (!AppState.firebaseUser || !AppState.firebaseDb) return;
+      if (!AppState.firestoreLoaded && !force) return;
+      try {
+        const ref = AppState.firebaseDb.collection("users").doc(AppState.firebaseUser.uid);
+        const payload = {
+          user_profile: AppState.user || null,
+          watchlist: AppState.watchlist || [],
+          watched: AppState.watched || [],
+          updated_at: new Date().toISOString()
+        };
+        await ref.set(payload, { merge: true });
+      } catch (e) {
+        const messageEl = document.getElementById("authMessage");
+        if (messageEl) messageEl.textContent = `Firestore save error: ${e.message || e}`;
       }
     },
 
@@ -2950,6 +3051,9 @@
           <div class="card">
             <div class="section-label">Account</div>
             <p class="small-text" id="authStatus">Not signed in.</p>
+            <p class="small-text" style="margin-bottom:.8rem;">
+              Sign in to sync your profile, watchlist, and watched list across devices.
+            </p>
             <div class="form-group">
               <label class="form-label">Email</label>
               <input id="authEmail" class="form-input" type="email" placeholder="you@email.com">
