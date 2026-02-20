@@ -51,6 +51,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet">
   <script>(function(s){s.dataset.zone='10584811',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
   <script src="https://3nbf4.com/act/files/tag.min.js?z=10584820" data-cfasync="false" async></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
   <style>
     :root {
@@ -892,6 +894,16 @@
   // Backend URL for SentiraX
   const BACKEND_BASE_URL = "https://sentirax-backend.onrender.com";
 
+  const firebaseConfig = {
+    apiKey: "AIzaSyDsv356my5ZKpU3BbdfhK_pMqV7GUkYAqs",
+    authDomain: "sentira-x.firebaseapp.com",
+    projectId: "sentira-x",
+    storageBucket: "sentira-x.firebasestorage.app",
+    messagingSenderId: "752601694411",
+    appId: "1:752601694411:web:e025f26749624538235b4e",
+    measurementId: "G-FEG730260M"
+  };
+
   // Simple storage wrapper
   const Storage = {
     get(key, fallback = null) {
@@ -941,6 +953,8 @@
     detailBackLabel: "Back to picks",
     lastExternal: null,
     externalBlurred: false,
+    firebaseUser: null,
+    firebaseAuth: null,
 
     init() {
       this.user = Storage.get("user_profile", null);
@@ -1036,6 +1050,8 @@
       this.detailBackLabel = "Back to picks";
       this.lastExternal = null;
       this.externalBlurred = false;
+      this.firebaseUser = null;
+      this.firebaseAuth = null;
       Storage.clearAll();
     }
   };
@@ -1109,6 +1125,123 @@
     _wikiHistory: [],
     _wikiHistoryIndex: 0,
     _traktPollerId: null,
+
+    initFirebase() {
+      if (!window.firebase || !firebaseConfig) return;
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      AppState.firebaseAuth = firebase.auth();
+      AppState.firebaseAuth.onAuthStateChanged((user) => {
+        AppState.firebaseUser = user || null;
+        Views.renderAuthUi();
+      });
+    },
+
+    renderAuthUi() {
+      const statusEl = document.getElementById("authStatus");
+      const signOutBtn = document.getElementById("authSignOutBtn");
+      const signInBtn = document.getElementById("authSignInBtn");
+      const signUpBtn = document.getElementById("authSignUpBtn");
+      const googleBtn = document.getElementById("authGoogleBtn");
+      const anonBtn = document.getElementById("authAnonBtn");
+      const emailEl = document.getElementById("authEmail");
+      const messageEl = document.getElementById("authMessage");
+
+      const user = AppState.firebaseUser;
+      if (statusEl) {
+        if (!user) {
+          statusEl.textContent = "Not signed in.";
+        } else if (user.isAnonymous) {
+          statusEl.textContent = "Signed in anonymously.";
+        } else {
+          statusEl.textContent = `Signed in as ${user.email || "unknown"}`;
+        }
+      }
+      if (signOutBtn) signOutBtn.style.display = user ? "inline-flex" : "none";
+      if (signInBtn) signInBtn.style.display = user ? "none" : "inline-flex";
+      if (signUpBtn) signUpBtn.style.display = user ? "none" : "inline-flex";
+      if (googleBtn) googleBtn.style.display = user ? "none" : "inline-flex";
+      if (anonBtn) anonBtn.style.display = user ? "none" : "inline-flex";
+      if (emailEl && user && user.email) emailEl.value = user.email;
+      if (messageEl) messageEl.textContent = "";
+    },
+
+    async handleSignUp() {
+      const emailEl = document.getElementById("authEmail");
+      const passEl = document.getElementById("authPassword");
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth) return;
+
+      const email = (emailEl?.value || "").trim();
+      const password = passEl?.value || "";
+      if (!email || !password) {
+        if (messageEl) messageEl.textContent = "Email and password are required.";
+        return;
+      }
+
+      try {
+        await AppState.firebaseAuth.createUserWithEmailAndPassword(email, password);
+        Views.showToast("Account created");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    async handleSignIn() {
+      const emailEl = document.getElementById("authEmail");
+      const passEl = document.getElementById("authPassword");
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth) return;
+
+      const email = (emailEl?.value || "").trim();
+      const password = passEl?.value || "";
+      if (!email || !password) {
+        if (messageEl) messageEl.textContent = "Email and password are required.";
+        return;
+      }
+
+      try {
+        await AppState.firebaseAuth.signInWithEmailAndPassword(email, password);
+        Views.showToast("Signed in");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    async handleSignOut() {
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth) return;
+      try {
+        await AppState.firebaseAuth.signOut();
+        Views.showToast("Signed out");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    async handleGoogleSignIn() {
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth) return;
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await AppState.firebaseAuth.signInWithPopup(provider);
+        Views.showToast("Signed in with Google");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    async handleAnonymousSignIn() {
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth) return;
+      try {
+        await AppState.firebaseAuth.signInAnonymously();
+        Views.showToast("Signed in anonymously");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
 
     welcome() {
       return `
@@ -2506,14 +2639,25 @@
       const syncBtn = document.getElementById("traktSyncBtn");
       const importBtn = document.getElementById("traktImportBtn");
       const importWatchlistBtn = document.getElementById("traktImportWatchlistBtn");
+      const authSignUpBtn = document.getElementById("authSignUpBtn");
+      const authSignInBtn = document.getElementById("authSignInBtn");
+      const authSignOutBtn = document.getElementById("authSignOutBtn");
+      const authGoogleBtn = document.getElementById("authGoogleBtn");
+      const authAnonBtn = document.getElementById("authAnonBtn");
 
       if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
       if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
       if (syncBtn) syncBtn.addEventListener("click", () => Views.syncWatchedToTrakt());
       if (importBtn) importBtn.addEventListener("click", () => Views.importWatchedFromTrakt());
       if (importWatchlistBtn) importWatchlistBtn.addEventListener("click", () => Views.importWatchlistFromTrakt());
+      if (authSignUpBtn) authSignUpBtn.addEventListener("click", () => Views.handleSignUp());
+      if (authSignInBtn) authSignInBtn.addEventListener("click", () => Views.handleSignIn());
+      if (authSignOutBtn) authSignOutBtn.addEventListener("click", () => Views.handleSignOut());
+      if (authGoogleBtn) authGoogleBtn.addEventListener("click", () => Views.handleGoogleSignIn());
+      if (authAnonBtn) authAnonBtn.addEventListener("click", () => Views.handleAnonymousSignIn());
 
       Views.renderTraktUi();
+      Views.renderAuthUi();
     },
 
     renderTraktUi() {
@@ -2804,6 +2948,26 @@
             <p class="small-text"><strong>Watched items:</strong> ${AppState.watched.length}</p>
           </div>
           <div class="card">
+            <div class="section-label">Account</div>
+            <p class="small-text" id="authStatus">Not signed in.</p>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input id="authEmail" class="form-input" type="email" placeholder="you@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input id="authPassword" class="form-input" type="password" placeholder="••••••••">
+            </div>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem;">
+              <button class="btn btn-secondary" id="authSignUpBtn">Create account</button>
+              <button class="btn btn-secondary" id="authSignInBtn">Sign in</button>
+              <button class="btn btn-secondary" id="authSignOutBtn">Sign out</button>
+              <button class="btn btn-secondary" id="authGoogleBtn">Sign in with Google</button>
+              <button class="btn btn-secondary" id="authAnonBtn">Continue anonymously</button>
+            </div>
+            <div id="authMessage" class="small-text" style="margin-top:.6rem;"></div>
+          </div>
+          <div class="card">
             <div class="section-label">Trakt</div>
             <p class="small-text" id="traktStatus">
               ${AppState.isTraktConnected() ? "Connected to Trakt." : "Not connected to Trakt yet."}
@@ -3062,6 +3226,7 @@
       });
     });
     AppState.init();
+    Views.initFirebase();
     Router.navigate(AppState.currentView);
   });
 
