@@ -68,7 +68,7 @@
       --text-main: #e5e7eb;
       --text-muted: #9ca3af;
       --highlight: #4ade80;
-      --danger: #f97316;
+      --danger: #ef4444;
     }
     * {
       margin: 0;
@@ -194,6 +194,17 @@
     .btn-secondary:hover {
       border-color: var(--accent);
       box-shadow: 0 8px 30px rgba(15,23,42,0.9);
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: #13090b;
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
+    }
+    .btn-danger:hover {
+      border-color: var(--danger);
+      color: #fee2e2;
+      box-shadow: 0 8px 30px rgba(127, 29, 29, 0.45);
       transform: translateY(-1px);
     }
     .btn-ghost {
@@ -1180,6 +1191,7 @@
       const statusEl = document.getElementById("authStatus");
       const syncInfoEl = document.getElementById("authSyncInfo");
       const signOutBtn = document.getElementById("authSignOutBtn");
+      const deleteBtn = document.getElementById("authDeleteBtn");
       const signInBtn = document.getElementById("authSignInBtn");
       const signUpBtn = document.getElementById("authSignUpBtn");
       const googleBtn = document.getElementById("authGoogleBtn");
@@ -1203,6 +1215,7 @@
           : "Sign in to sync your profile, watchlist, and watched list across devices.";
       }
       if (signOutBtn) signOutBtn.style.display = user ? "inline-flex" : "none";
+      if (deleteBtn) deleteBtn.style.display = user ? "inline-flex" : "none";
       if (signInBtn) signInBtn.style.display = user ? "none" : "inline-flex";
       if (signUpBtn) signUpBtn.style.display = user ? "none" : "inline-flex";
       if (googleBtn) googleBtn.style.display = user ? "none" : "inline-flex";
@@ -1263,6 +1276,46 @@
       } catch (e) {
         if (messageEl) messageEl.textContent = e.message || String(e);
       }
+    },
+
+    async handleDeleteAccount() {
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseAuth || !AppState.firebaseUser) {
+        if (messageEl) messageEl.textContent = "Sign in first.";
+        return;
+      }
+
+      Views.showConfirm(
+        "Delete account?",
+        "This permanently deletes your account and cloud data. This action cannot be undone.",
+        async () => {
+          try {
+            const user = AppState.firebaseAuth.currentUser;
+            if (!user) {
+              if (messageEl) messageEl.textContent = "No signed-in user found.";
+              return;
+            }
+
+            if (AppState.firebaseDb) {
+              try {
+                await AppState.firebaseDb.collection("users").doc(user.uid).delete();
+              } catch {}
+            }
+
+            await user.delete();
+            await Views.clearClientCachesOnSignOut();
+            Views.showToast("Account deleted");
+          } catch (e) {
+            if (!messageEl) return;
+            if (e?.code === "auth/requires-recent-login") {
+              messageEl.textContent = "For security, sign in again and then retry deleting your account.";
+            } else {
+              messageEl.textContent = e.message || String(e);
+            }
+          }
+        },
+        { danger: true, confirmLabel: "Delete account" }
+      );
     },
 
     async clearClientCachesOnSignOut() {
@@ -2943,6 +2996,7 @@
       const authSignUpBtn = document.getElementById("authSignUpBtn");
       const authSignInBtn = document.getElementById("authSignInBtn");
       const authSignOutBtn = document.getElementById("authSignOutBtn");
+      const authDeleteBtn = document.getElementById("authDeleteBtn");
       const authGoogleBtn = document.getElementById("authGoogleBtn");
       const authAnonBtn = document.getElementById("authAnonBtn");
       const firestoreSyncBtn = document.getElementById("firestoreSyncBtn");
@@ -2955,6 +3009,7 @@
       if (authSignUpBtn) authSignUpBtn.addEventListener("click", () => Views.handleSignUp());
       if (authSignInBtn) authSignInBtn.addEventListener("click", () => Views.handleSignIn());
       if (authSignOutBtn) authSignOutBtn.addEventListener("click", () => Views.handleSignOut());
+      if (authDeleteBtn) authDeleteBtn.addEventListener("click", () => Views.handleDeleteAccount());
       if (authGoogleBtn) authGoogleBtn.addEventListener("click", () => Views.handleGoogleSignIn());
       if (authAnonBtn) authAnonBtn.addEventListener("click", () => Views.handleAnonymousSignIn());
       if (firestoreSyncBtn) firestoreSyncBtn.addEventListener("click", () => Views.syncAllDataToFirestore());
@@ -3267,7 +3322,8 @@
             <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem;">
               <button class="btn btn-secondary" id="authSignUpBtn">Create account</button>
               <button class="btn btn-secondary" id="authSignInBtn">Sign in</button>
-              <button class="btn btn-secondary" id="authSignOutBtn">Sign out</button>
+              <button class="btn btn-danger" id="authSignOutBtn">Sign out</button>
+              <button class="btn btn-danger" id="authDeleteBtn">Delete account</button>
               <button class="btn btn-secondary" id="authGoogleBtn">Sign in with Google</button>
               <button class="btn btn-secondary" id="authAnonBtn">Continue anonymously</button>
               <button class="btn btn-secondary" id="firestoreSyncBtn">Sync all data to cloud</button>
@@ -3300,8 +3356,8 @@
             <p class="small-text" style="margin-bottom:0.8rem;">
               Your profile and history are stored locally in this browser and sent to the backend only for generating recommendations. You can clear everything anytime.
             </p>
-            <button class="btn btn-secondary" style="margin-bottom:0.6rem;" onclick="Views.clearHistory()">Clear history</button>
-            <button class="btn btn-secondary" onclick="Views.resetApp()">Reset all & start over</button>
+            <button class="btn btn-danger" style="margin-bottom:0.6rem;" onclick="Views.clearHistory()">Clear history</button>
+            <button class="btn btn-danger" onclick="Views.resetApp()">Reset all & start over</button>
           </div>
         </div>
       `;
@@ -3322,7 +3378,8 @@
         () => {
           AppState.reset();
           Router.navigate("welcome");
-        }
+        },
+        { danger: true, confirmLabel: "Reset all data" }
       );
     },
 
@@ -3339,7 +3396,9 @@
       document.body.appendChild(overlay);
     },
 
-    showConfirm(title, message, onConfirm) {
+    showConfirm(title, message, onConfirm, opts = {}) {
+      const confirmLabel = opts.confirmLabel || "Confirm";
+      const confirmClass = opts.danger ? "btn btn-danger" : "btn btn-primary";
       const overlay = document.createElement("div");
       overlay.className = "modal-overlay";
       overlay.innerHTML = `
@@ -3348,7 +3407,7 @@
           <p class="small-text" style="margin-bottom:1rem;">${message}</p>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
             <button class="btn btn-secondary" style="flex:1;" data-role="cancel">Cancel</button>
-            <button class="btn btn-primary" style="flex:1;" data-role="ok">Confirm</button>
+            <button class="${confirmClass}" style="flex:1;" data-role="ok">${confirmLabel}</button>
           </div>
         </div>
       `;
