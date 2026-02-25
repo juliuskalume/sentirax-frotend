@@ -2337,6 +2337,261 @@
       await Views.syncWatchedItemToTrakt(item);
     },
 
+    findWatchedEntry(item) {
+      if (!item) return null;
+      return (
+        AppState.watched.find((x) =>
+          x.id === item.id ||
+          (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+        ) || null
+      );
+    },
+
+    buildSeasonEpisodeMap(seasons) {
+      const map = new Map();
+      (Array.isArray(seasons) ? seasons : []).forEach((season) => {
+        const seasonNumber = Number(season?.number);
+        if (!Number.isFinite(seasonNumber) || seasonNumber < 0) return;
+        if (!map.has(seasonNumber)) map.set(seasonNumber, new Set());
+
+        const episodeSet = map.get(seasonNumber);
+        (Array.isArray(season?.episodes) ? season.episodes : []).forEach((episode) => {
+          const episodeNumber = Number(
+            episode?.number ?? episode?.episode_number ?? episode
+          );
+          if (!Number.isFinite(episodeNumber) || episodeNumber <= 0) return;
+          episodeSet.add(episodeNumber);
+        });
+      });
+      return map;
+    },
+
+    seasonEpisodeMapToList(map) {
+      const seasons = [];
+      Array.from(map.entries())
+        .sort((a, b) => a[0] - b[0])
+        .forEach(([seasonNumber, episodeSet]) => {
+          const episodes = Array.from(episodeSet || [])
+            .filter((n) => Number.isFinite(Number(n)) && Number(n) > 0)
+            .sort((a, b) => a - b)
+            .map((episodeNumber) => ({ number: Number(episodeNumber) }));
+          if (!episodes.length) return;
+          seasons.push({
+            number: Number(seasonNumber),
+            episodes,
+          });
+        });
+      return seasons;
+    },
+
+    mergeShowSeasonSelections(existingSeasons, selectedSeasonMap) {
+      const mergedMap = Views.buildSeasonEpisodeMap(existingSeasons);
+      Array.from(selectedSeasonMap.entries()).forEach(([seasonNumber, episodeSet]) => {
+        const sNum = Number(seasonNumber);
+        if (!Number.isFinite(sNum) || sNum < 0) return;
+        if (!mergedMap.has(sNum)) mergedMap.set(sNum, new Set());
+        const targetSet = mergedMap.get(sNum);
+        Array.from(episodeSet || []).forEach((episodeNumber) => {
+          const eNum = Number(episodeNumber);
+          if (!Number.isFinite(eNum) || eNum <= 0) return;
+          targetSet.add(eNum);
+        });
+      });
+      return Views.seasonEpisodeMapToList(mergedMap);
+    },
+
+    refreshAfterWatchedChange() {
+      if (AppState.currentView === "detail" && AppState.selectedTitle) {
+        Router.navigate("detail", {
+          title: AppState.selectedTitle,
+          backView: AppState.detailBackView,
+          backLabel: AppState.detailBackLabel
+        });
+        return;
+      }
+      Router.navigate(AppState.currentView);
+    },
+
+    async handlePromptMarkAsWatched(item) {
+      if (!item || item.type !== "show" || !item.tmdb_id) {
+        await Views.markWatchedWithSync(item);
+        Views.refreshAfterWatchedChange();
+        return;
+      }
+
+      try {
+        const seasonData = await Views.fetchShowSeasons(item.tmdb_id);
+        const seasons = Array.isArray(seasonData?.seasons) ? seasonData.seasons : [];
+        if (!seasons.length) {
+          await Views.markWatchedWithSync(item);
+          Views.refreshAfterWatchedChange();
+          return;
+        }
+        Views.openShowEpisodeWatchedModal(item, seasons);
+      } catch (e) {
+        Views.showToast("Could not load episodes. Marking series watched.");
+        await Views.markWatchedWithSync(item);
+        Views.refreshAfterWatchedChange();
+      }
+    },
+
+    async fetchShowSeasons(tmdbId) {
+      const key = `tv-seasons-${tmdbId}`;
+      if (AppState.detailsCache[key]) return AppState.detailsCache[key];
+
+      const res = await fetch(
+        `${BACKEND_BASE_URL}/api/tv-seasons?id=${encodeURIComponent(tmdbId)}`
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || json.details || "Failed to fetch seasons");
+      }
+      AppState.detailsCache[key] = json;
+      return json;
+    },
+
+    openShowEpisodeWatchedModal(item, seasons) {
+      const existing = Views.findWatchedEntry(item);
+      const selectedBySeason = new Map();
+      let activeSeasonNumber = Number(seasons?.[0]?.season_number);
+
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal-content" style="max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
+          <h3 style="margin-bottom:.6rem;">Mark episodes watched</h3>
+          <p class="small-text" style="margin-bottom:.8rem;">
+            Select the exact season and episodes watched for "${item.name || item.title || "this series"}".
+          </p>
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.7rem;">
+            <label class="small-text" for="seriesSeasonSelect" style="min-width:48px;">Season</label>
+            <select id="seriesSeasonSelect" class="form-input" style="max-width:220px;"></select>
+            <button class="btn btn-secondary" type="button" data-role="selectAllSeason">Select all in season</button>
+            <button class="btn btn-secondary" type="button" data-role="clearSeasonSelection">Clear season selection</button>
+          </div>
+          <div id="seriesEpisodeList" style="overflow:auto;max-height:44vh;border:1px solid var(--border-subtle);border-radius:12px;padding:.75rem;"></div>
+          <div id="seriesWatchError" class="small-text" style="min-height:1.2rem;color:#fca5a5;margin-top:.55rem;"></div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem;">
+            <button class="btn btn-secondary" style="flex:1;" data-role="cancel">No, cancel</button>
+            <button class="btn btn-primary" style="flex:1;" data-role="confirm">Yes, mark as watched</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const seasonSelect = overlay.querySelector("#seriesSeasonSelect");
+      const episodeListEl = overlay.querySelector("#seriesEpisodeList");
+      const errorEl = overlay.querySelector("#seriesWatchError");
+      const selectAllBtn = overlay.querySelector('[data-role="selectAllSeason"]');
+      const clearBtn = overlay.querySelector('[data-role="clearSeasonSelection"]');
+      const cancelBtn = overlay.querySelector('[data-role="cancel"]');
+      const confirmBtn = overlay.querySelector('[data-role="confirm"]');
+
+      if (!seasonSelect || !episodeListEl || !errorEl || !selectAllBtn || !clearBtn || !cancelBtn || !confirmBtn) {
+        overlay.remove();
+        return;
+      }
+
+      seasonSelect.innerHTML = seasons
+        .map((season) => {
+          const count = Number(season.episode_count || (season.episodes || []).length || 0);
+          const label = `${season.name || `Season ${season.season_number}`} (${count} eps)`;
+          return `<option value="${season.season_number}">${label}</option>`;
+        })
+        .join("");
+
+      const renderEpisodeList = () => {
+        activeSeasonNumber = Number(seasonSelect.value);
+        const season = seasons.find((s) => Number(s.season_number) === activeSeasonNumber);
+        const chosen = selectedBySeason.get(activeSeasonNumber) || new Set();
+        const episodes = Array.isArray(season?.episodes) ? season.episodes : [];
+        episodeListEl.innerHTML = episodes.length
+          ? episodes
+              .map((ep) => {
+                const eNum = Number(ep.episode_number);
+                const checked = chosen.has(eNum) ? "checked" : "";
+                const air = ep.air_date ? ` <span style="color:var(--text-muted);">(${ep.air_date})</span>` : "";
+                return `
+                  <label style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;border-bottom:1px solid #111827;">
+                    <input type="checkbox" data-episode="${eNum}" ${checked}>
+                    <span class="small-text">E${eNum}: ${ep.name || `Episode ${eNum}`}${air}</span>
+                  </label>
+                `;
+              })
+              .join("")
+          : `<p class="small-text">No episodes found for this season.</p>`;
+
+        episodeListEl.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+          checkbox.addEventListener("change", () => {
+            const eNum = Number(checkbox.dataset.episode);
+            if (!selectedBySeason.has(activeSeasonNumber)) {
+              selectedBySeason.set(activeSeasonNumber, new Set());
+            }
+            const set = selectedBySeason.get(activeSeasonNumber);
+            if (checkbox.checked) set.add(eNum);
+            else set.delete(eNum);
+            if (!set.size) selectedBySeason.delete(activeSeasonNumber);
+            errorEl.textContent = "";
+          });
+        });
+      };
+
+      seasonSelect.addEventListener("change", renderEpisodeList);
+
+      selectAllBtn.addEventListener("click", () => {
+        const season = seasons.find((s) => Number(s.season_number) === Number(seasonSelect.value));
+        const episodes = Array.isArray(season?.episodes) ? season.episodes : [];
+        const set = new Set(
+          episodes
+            .map((ep) => Number(ep.episode_number))
+            .filter((num) => Number.isFinite(num) && num > 0)
+        );
+        if (set.size) selectedBySeason.set(Number(seasonSelect.value), set);
+        renderEpisodeList();
+      });
+
+      clearBtn.addEventListener("click", () => {
+        selectedBySeason.delete(Number(seasonSelect.value));
+        renderEpisodeList();
+      });
+
+      cancelBtn.addEventListener("click", () => overlay.remove());
+
+      confirmBtn.addEventListener("click", async () => {
+        if (!selectedBySeason.size) {
+          errorEl.textContent = "Select at least one episode to mark as watched.";
+          return;
+        }
+
+        const mergedSeasons = Views.mergeShowSeasonSelections(
+          existing?.seasons,
+          selectedBySeason
+        );
+
+        const watchedItem = {
+          ...item,
+          watched_at: new Date().toISOString(),
+          seasons: mergedSeasons,
+        };
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Saving...";
+        try {
+          await Views.markWatchedWithSync(watchedItem, { showToast: false });
+          Views.showToast("Episodes marked as watched");
+          overlay.remove();
+          Views.refreshAfterWatchedChange();
+        } catch (e) {
+          errorEl.textContent = e.message || String(e);
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = "Yes, mark as watched";
+        }
+      });
+
+      renderEpisodeList();
+    },
+
     async postTraktItemSync(path, item, errorLabel = "Trakt sync") {
       if (!AppState.isTraktConnected()) return true;
       if (!item || !item.tmdb_id || !item.type) return false;
@@ -2744,7 +2999,7 @@
       Views.showConfirm(
         "Mark as watched?",
         `Did you watch "${name}"?`,
-        () => Views.markWatchedWithSync(item),
+        () => Views.handlePromptMarkAsWatched(item),
         {
           confirmLabel: "Yes, mark as watched",
           cancelLabel: "No, cancel"
