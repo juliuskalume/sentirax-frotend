@@ -2991,6 +2991,7 @@
       const connectBtn = document.getElementById("traktConnectBtn");
       const disconnectBtn = document.getElementById("traktDisconnectBtn");
       const syncBtn = document.getElementById("traktSyncBtn");
+      const syncWatchlistBtn = document.getElementById("traktSyncWatchlistBtn");
       const importBtn = document.getElementById("traktImportBtn");
       const importWatchlistBtn = document.getElementById("traktImportWatchlistBtn");
       const authSignUpBtn = document.getElementById("authSignUpBtn");
@@ -3004,6 +3005,7 @@
       if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
       if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
       if (syncBtn) syncBtn.addEventListener("click", () => Views.syncWatchedToTrakt());
+      if (syncWatchlistBtn) syncWatchlistBtn.addEventListener("click", () => Views.syncWatchlistToTrakt());
       if (importBtn) importBtn.addEventListener("click", () => Views.importWatchedFromTrakt());
       if (importWatchlistBtn) importWatchlistBtn.addEventListener("click", () => Views.importWatchlistFromTrakt());
       if (authSignUpBtn) authSignUpBtn.addEventListener("click", () => Views.handleSignUp());
@@ -3023,6 +3025,7 @@
       const connectBtn = document.getElementById("traktConnectBtn");
       const disconnectBtn = document.getElementById("traktDisconnectBtn");
       const syncBtn = document.getElementById("traktSyncBtn");
+      const syncWatchlistBtn = document.getElementById("traktSyncWatchlistBtn");
       const importBtn = document.getElementById("traktImportBtn");
       const importWatchlistBtn = document.getElementById("traktImportWatchlistBtn");
       const deviceBox = document.getElementById("traktDeviceBox");
@@ -3037,6 +3040,7 @@
       if (connectBtn) connectBtn.style.display = connected ? "none" : "inline-flex";
       if (disconnectBtn) disconnectBtn.style.display = connected ? "inline-flex" : "none";
       if (syncBtn) syncBtn.style.display = connected ? "inline-flex" : "none";
+      if (syncWatchlistBtn) syncWatchlistBtn.style.display = connected ? "inline-flex" : "none";
       if (importBtn) importBtn.style.display = connected ? "inline-flex" : "none";
       if (importWatchlistBtn) importWatchlistBtn.style.display = connected ? "inline-flex" : "none";
 
@@ -3197,6 +3201,45 @@
       }
     },
 
+    async syncWatchlistToTrakt() {
+      if (!AppState.isTraktConnected()) {
+        Views.showToast("Connect Trakt first");
+        return;
+      }
+
+      const token = AppState.traktAuth.access_token;
+      const items = (AppState.watchlist || []).filter(x => x.tmdb_id && x.type);
+      if (!items.length) {
+        Views.showToast("No watchlist items to sync");
+        return;
+      }
+
+      try {
+        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/sync/watchlist", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ items })
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          Views.showToast("Trakt sync failed");
+          const messageEl = document.getElementById("traktMessage");
+          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt sync failed.";
+          return;
+        }
+
+        Views.showToast("Synced watchlist to Trakt");
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = "Watchlist synced to Trakt.";
+      } catch (e) {
+        const messageEl = document.getElementById("traktMessage");
+        if (messageEl) messageEl.textContent = `Trakt sync error: ${e.message || e}`;
+      }
+    },
+
     async importWatchedFromTrakt() {
       if (!AppState.isTraktConnected()) {
         Views.showToast("Connect Trakt first");
@@ -3339,6 +3382,7 @@
               <button class="btn btn-secondary" id="traktConnectBtn">Connect Trakt</button>
               <button class="btn btn-secondary" id="traktDisconnectBtn">Disconnect</button>
               <button class="btn btn-secondary" id="traktSyncBtn">Sync watched to Trakt</button>
+              <button class="btn btn-secondary" id="traktSyncWatchlistBtn">Sync watchlist to Trakt</button>
               <button class="btn btn-secondary" id="traktImportBtn">Import watched from Trakt</button>
               <button class="btn btn-secondary" id="traktImportWatchlistBtn">Import watchlist from Trakt</button>
             </div>
