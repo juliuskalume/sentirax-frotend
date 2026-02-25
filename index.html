@@ -2306,14 +2306,8 @@
       if (!item) return;
       const exists = AppState.isWatched(id, item.tmdb_id, item.type);
       if (exists) {
-        const tracked =
-          AppState.watched.find(r =>
-            r.id === id ||
-            (item.tmdb_id && r.tmdb_id === item.tmdb_id && r.type === item.type)
-          ) || item;
-        AppState.removeFromWatched(id, item.tmdb_id, item.type);
-        Views.showToast("Marked as unwatched");
-        Views.syncWatchedRemovalToTrakt(tracked);
+        Views.handleWatchedCheckedAction(item);
+        return;
       } else {
         if (item.type === "show" && item.tmdb_id) {
           Views.handlePromptMarkAsWatched(item);
@@ -2339,6 +2333,84 @@
         Views.showToast("Marked as watched");
       }
       await Views.syncWatchedItemToTrakt(item);
+    },
+
+    removeWatchedWithSync(item, opts = {}) {
+      if (!item) return;
+
+      const tracked =
+        AppState.watched.find((x) =>
+          x.id === item.id ||
+          (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+        ) || item;
+
+      AppState.removeFromWatched(tracked.id || item.id, tracked.tmdb_id, tracked.type || item.type);
+      if (opts.showToast !== false) {
+        Views.showToast("Marked as unwatched");
+      }
+      Views.syncWatchedRemovalToTrakt(tracked);
+      if (opts.refresh !== false) {
+        Views.refreshAfterWatchedChange();
+      }
+    },
+
+    showSeriesWatchedActionDialog(item) {
+      const name = item?.name || item?.title || "this series";
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal-content">
+          <h3 style="margin-bottom:.6rem;">Series already marked watched</h3>
+          <p class="small-text" style="margin-bottom:1rem;">
+            What do you want to do with "${name}"?
+          </p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button class="btn btn-secondary" style="flex:1;" data-role="cancel">No, cancel</button>
+            <button class="btn btn-secondary" style="flex:1;" data-role="update">Update watched episodes</button>
+            <button class="btn btn-danger" style="flex:1;" data-role="unwatch">Mark as unwatched</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      const cancelBtn = overlay.querySelector('[data-role="cancel"]');
+      const updateBtn = overlay.querySelector('[data-role="update"]');
+      const unwatchBtn = overlay.querySelector('[data-role="unwatch"]');
+
+      if (cancelBtn) cancelBtn.addEventListener("click", () => overlay.remove());
+      if (updateBtn) {
+        updateBtn.addEventListener("click", () => {
+          overlay.remove();
+          Views.handlePromptMarkAsWatched(item);
+        });
+      }
+      if (unwatchBtn) {
+        unwatchBtn.addEventListener("click", () => {
+          overlay.remove();
+          Views.removeWatchedWithSync(item);
+        });
+      }
+    },
+
+    handleWatchedCheckedAction(item) {
+      if (!item) return;
+
+      const name = item.name || item.title || "this title";
+      if (item.type === "show" && item.tmdb_id) {
+        Views.showSeriesWatchedActionDialog(item);
+        return;
+      }
+
+      Views.showConfirm(
+        "Mark as unwatched?",
+        `Do you want to mark "${name}" as unwatched?`,
+        () => Views.removeWatchedWithSync(item),
+        {
+          confirmLabel: "Yes, mark as unwatched",
+          cancelLabel: "No, cancel",
+          danger: true
+        }
+      );
     },
 
     findWatchedEntry(item) {
@@ -2783,15 +2855,7 @@
       btn.addEventListener("click", () => {
         const exists = AppState.isWatched(title.id, title.tmdb_id, title.type);
         if (exists) {
-          const tracked =
-            AppState.watched.find(item =>
-              item.id === title.id ||
-              (title.tmdb_id && item.tmdb_id === title.tmdb_id && item.type === title.type)
-            ) || title;
-          AppState.removeFromWatched(title.id, title.tmdb_id, title.type);
-          btn.textContent = "👁️ Mark as watched";
-          Views.showToast("Marked as unwatched");
-          Views.syncWatchedRemovalToTrakt(tracked);
+          Views.handleWatchedCheckedAction(title);
         } else {
           if (title.type === "show" && title.tmdb_id) {
             Views.handlePromptMarkAsWatched(title);
