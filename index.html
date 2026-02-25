@@ -1178,6 +1178,7 @@
 
     renderAuthUi() {
       const statusEl = document.getElementById("authStatus");
+      const syncInfoEl = document.getElementById("authSyncInfo");
       const signOutBtn = document.getElementById("authSignOutBtn");
       const signInBtn = document.getElementById("authSignInBtn");
       const signUpBtn = document.getElementById("authSignUpBtn");
@@ -1195,6 +1196,11 @@
         } else {
           statusEl.textContent = `Signed in as ${user.email || "unknown"}`;
         }
+      }
+      if (syncInfoEl) {
+        syncInfoEl.textContent = user
+          ? "Your profile, watchlist, and watched list are synced across devices."
+          : "Sign in to sync your profile, watchlist, and watched list across devices.";
       }
       if (signOutBtn) signOutBtn.style.display = user ? "inline-flex" : "none";
       if (signInBtn) signInBtn.style.display = user ? "none" : "inline-flex";
@@ -3247,7 +3253,7 @@
           <div class="card">
             <div class="section-label">Account</div>
             <p class="small-text" id="authStatus">Not signed in.</p>
-            <p class="small-text" style="margin-bottom:.8rem;">
+            <p class="small-text" id="authSyncInfo" style="margin-bottom:.8rem;">
               Sign in to sync your profile, watchlist, and watched list across devices.
             </p>
             <div class="form-group">
