@@ -2744,7 +2744,11 @@
       Views.showConfirm(
         "Mark as watched?",
         `Did you watch "${name}"?`,
-        () => Views.markWatchedWithSync(item)
+        () => Views.markWatchedWithSync(item),
+        {
+          confirmLabel: "Yes, mark as watched",
+          cancelLabel: "No, cancel"
+        }
       );
     },
 
@@ -3442,6 +3446,7 @@
 
     showConfirm(title, message, onConfirm, opts = {}) {
       const confirmLabel = opts.confirmLabel || "Confirm";
+      const cancelLabel = opts.cancelLabel || "Cancel";
       const confirmClass = opts.danger ? "btn btn-danger" : "btn btn-primary";
       const overlay = document.createElement("div");
       overlay.className = "modal-overlay";
@@ -3450,7 +3455,7 @@
           <h3 style="margin-bottom:.6rem;">${title}</h3>
           <p class="small-text" style="margin-bottom:1rem;">${message}</p>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-            <button class="btn btn-secondary" style="flex:1;" data-role="cancel">Cancel</button>
+            <button class="btn btn-secondary" style="flex:1;" data-role="cancel">${cancelLabel}</button>
             <button class="${confirmClass}" style="flex:1;" data-role="ok">${confirmLabel}</button>
           </div>
         </div>
