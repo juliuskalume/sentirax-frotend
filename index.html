@@ -1349,9 +1349,26 @@
       });
       (remoteList || []).forEach(item => {
         const key = `${item.type || "item"}-${item.tmdb_id || item.id}`;
-        if (!byKey.has(key)) byKey.set(key, item);
+        byKey.set(key, item);
       });
       return Array.from(byKey.values());
+    },
+
+    sanitizeForFirestore(value) {
+      if (value === undefined) return null;
+      if (value === null) return null;
+      if (Array.isArray(value)) {
+        return value.map((v) => Views.sanitizeForFirestore(v));
+      }
+      if (typeof value === "object") {
+        const out = {};
+        Object.keys(value).forEach((k) => {
+          const v = Views.sanitizeForFirestore(value[k]);
+          if (v !== undefined) out[k] = v;
+        });
+        return out;
+      }
+      return value;
     },
 
     async loadUserDataFromFirestore() {
@@ -1399,27 +1416,25 @@
         clearTimeout(Views._firestoreSaveTimer);
       }
       Views._firestoreSaveTimer = setTimeout(() => {
-        Views.saveUserDataToFirestore();
+        Views.saveUserDataToFirestore().catch((e) => {
+          const messageEl = document.getElementById("authMessage");
+          if (messageEl) messageEl.textContent = `Firestore save error: ${e.message || e}`;
+        });
       }, 800);
     },
 
     async saveUserDataToFirestore(force = false) {
       if (!AppState.firebaseUser || !AppState.firebaseDb) return;
       if (!AppState.firestoreLoaded && !force) return;
-      try {
-        const ref = AppState.firebaseDb.collection("users").doc(AppState.firebaseUser.uid);
-        const payload = {
-          user_profile: AppState.user || null,
-          watchlist: AppState.watchlist || [],
-          watched: AppState.watched || [],
-          checkins: AppState.checkins || [],
-          updated_at: new Date().toISOString()
-        };
-        await ref.set(payload, { merge: true });
-      } catch (e) {
-        const messageEl = document.getElementById("authMessage");
-        if (messageEl) messageEl.textContent = `Firestore save error: ${e.message || e}`;
-      }
+      const ref = AppState.firebaseDb.collection("users").doc(AppState.firebaseUser.uid);
+      const payload = Views.sanitizeForFirestore({
+        user_profile: AppState.user || null,
+        watchlist: AppState.watchlist || [],
+        watched: AppState.watched || [],
+        checkins: AppState.checkins || [],
+        updated_at: new Date().toISOString()
+      });
+      await ref.set(payload, { merge: true });
     },
 
     welcome() {
@@ -2215,9 +2230,11 @@
       if (exists) {
         AppState.removeFromWatchlist(exists.id);
         Views.showToast("Removed from watchlist");
+        Views.syncWatchlistRemovalToTrakt(exists);
       } else {
         AppState.addToWatchlist(item);
         Views.showToast("Added to watchlist");
+        Views.syncWatchlistItemToTrakt(item);
       }
     },
 
@@ -2230,8 +2247,14 @@
       if (!item) return;
       const exists = AppState.isWatched(id, item.tmdb_id, item.type);
       if (exists) {
+        const tracked =
+          AppState.watched.find(r =>
+            r.id === id ||
+            (item.tmdb_id && r.tmdb_id === item.tmdb_id && r.type === item.type)
+          ) || item;
         AppState.removeFromWatched(id, item.tmdb_id, item.type);
         Views.showToast("Marked as unwatched");
+        Views.syncWatchedRemovalToTrakt(tracked);
       } else {
         Views.markWatchedWithSync(item);
       }
@@ -2255,35 +2278,56 @@
       await Views.syncWatchedItemToTrakt(item);
     },
 
-    async syncWatchedItemToTrakt(item) {
-      if (!AppState.isTraktConnected()) return;
+    async postTraktItemSync(path, item, errorLabel = "Trakt sync") {
+      if (!AppState.isTraktConnected()) return true;
+      if (!item || !item.tmdb_id || !item.type) return false;
 
       const token = AppState.traktAuth.access_token;
-      const tracked = AppState.watched.find(x =>
-        x.id === item.id ||
-        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
-      ) || item;
-
-      if (!tracked.tmdb_id || !tracked.type) return;
-
       try {
-        const res = await fetch(BACKEND_BASE_URL + "/api/trakt/sync/history", {
+        const res = await fetch(BACKEND_BASE_URL + path, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ items: [tracked] })
+          body: JSON.stringify({ items: [item] })
         });
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
           const messageEl = document.getElementById("traktMessage");
-          if (messageEl) messageEl.textContent = json.error || json.details || "Trakt sync failed.";
+          if (messageEl) messageEl.textContent = json.error || json.details || `${errorLabel} failed.`;
+          return false;
         }
+        return true;
       } catch (e) {
         const messageEl = document.getElementById("traktMessage");
-        if (messageEl) messageEl.textContent = `Trakt sync error: ${e.message || e}`;
+        if (messageEl) messageEl.textContent = `${errorLabel} error: ${e.message || e}`;
+        return false;
       }
+    },
+
+    async syncWatchedItemToTrakt(item) {
+      const tracked = AppState.watched.find(x =>
+        x.id === item.id ||
+        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+      ) || item;
+      await Views.postTraktItemSync("/api/trakt/sync/history", tracked, "Trakt watched sync");
+    },
+
+    async syncWatchedRemovalToTrakt(item) {
+      await Views.postTraktItemSync("/api/trakt/sync/history/remove", item, "Trakt watched removal");
+    },
+
+    async syncWatchlistItemToTrakt(item) {
+      const tracked = AppState.watchlist.find(x =>
+        x.id === item.id ||
+        (x.tmdb_id && item.tmdb_id && x.tmdb_id === item.tmdb_id && x.type === item.type)
+      ) || item;
+      await Views.postTraktItemSync("/api/trakt/sync/watchlist", tracked, "Trakt watchlist sync");
+    },
+
+    async syncWatchlistRemovalToTrakt(item) {
+      await Views.postTraktItemSync("/api/trakt/sync/watchlist/remove", item, "Trakt watchlist removal");
     },
 
     detail(title, backView = "recommendations", backLabel = "Back to picks") {
@@ -2403,9 +2447,15 @@
       btn.addEventListener("click", () => {
         const exists = AppState.isWatched(title.id, title.tmdb_id, title.type);
         if (exists) {
+          const tracked =
+            AppState.watched.find(item =>
+              item.id === title.id ||
+              (title.tmdb_id && item.tmdb_id === title.tmdb_id && item.type === title.type)
+            ) || title;
           AppState.removeFromWatched(title.id, title.tmdb_id, title.type);
           btn.textContent = "👁️ Mark as watched";
           Views.showToast("Marked as unwatched");
+          Views.syncWatchedRemovalToTrakt(tracked);
         } else {
           Views.markWatchedWithSync(title);
           btn.textContent = "✅ Watched";
@@ -2494,21 +2544,29 @@
       const btn = document.getElementById("detailWatchlistBtn");
       if (!btn) return;
 
+      const findExisting = () =>
+        AppState.watchlist.find(item =>
+          item.id === title.id ||
+          (title.tmdb_id && item.tmdb_id === title.tmdb_id && item.type === title.type)
+        );
+
       const updateLabel = () => {
-        const inList = AppState.watchlist.some(item => item.id === title.id);
+        const inList = Boolean(findExisting());
         btn.textContent = inList ? "⭐ In watchlist" : "☆ Add to watchlist";
       };
 
       updateLabel();
 
       btn.onclick = () => {
-        const inList = AppState.watchlist.some(item => item.id === title.id);
-        if (inList) {
-          AppState.removeFromWatchlist(title.id);
+        const existing = findExisting();
+        if (existing) {
+          AppState.removeFromWatchlist(existing.id);
           Views.showToast("Removed from watchlist");
+          Views.syncWatchlistRemovalToTrakt(existing);
         } else {
           AppState.addToWatchlist(title);
           Views.showToast("Added to watchlist");
+          Views.syncWatchlistItemToTrakt(title);
         }
         updateLabel();
       };
@@ -2863,8 +2921,10 @@
     },
 
     removeFromWatchlist(id) {
+      const tracked = AppState.watchlist.find(r => String(r.id) === String(id)) || null;
       AppState.removeFromWatchlist(id);
       Views.showToast("Removed from watchlist");
+      Views.syncWatchlistRemovalToTrakt(tracked);
       Router.navigate("watchlist");
     },
 
