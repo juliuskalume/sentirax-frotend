@@ -982,6 +982,9 @@
       this.lastCheckIn = checkIn;
       this.checkins.push({ ...checkIn, ts: new Date().toISOString() });
       Storage.set("checkins", this.checkins);
+      if (typeof Views !== "undefined" && Views.scheduleFirestoreSave) {
+        Views.scheduleFirestoreSave();
+      }
     },
 
     addToWatchlist(item) {
@@ -1085,7 +1088,7 @@
     navigate(view, data = {}) {
       AppState.currentView = view;
       const navBar = document.getElementById("navBar");
-      if (["welcome", "onboarding"].includes(view)) {
+      if (["welcome", "onboarding", "login"].includes(view)) {
         navBar.style.display = "none";
       } else {
         navBar.style.display = "flex";
@@ -1107,6 +1110,10 @@
         case "onboarding":
           main.innerHTML = Views.onboarding();
           Views.initOnboarding();
+          break;
+        case "login":
+          main.innerHTML = Views.login();
+          Views.initLogin();
           break;
         case "check-in":
           main.innerHTML = Views.checkIn();
@@ -1245,10 +1252,53 @@
       if (!AppState.firebaseAuth) return;
       try {
         await AppState.firebaseAuth.signOut();
+        await Views.clearClientCachesOnSignOut();
         Views.showToast("Signed out");
       } catch (e) {
         if (messageEl) messageEl.textContent = e.message || String(e);
       }
+    },
+
+    async clearClientCachesOnSignOut() {
+      if (Views._traktPollerId) {
+        clearInterval(Views._traktPollerId);
+        Views._traktPollerId = null;
+      }
+      if (Views._firestoreSaveTimer) {
+        clearTimeout(Views._firestoreSaveTimer);
+        Views._firestoreSaveTimer = null;
+      }
+
+      AppState.user = null;
+      AppState.watchlist = [];
+      AppState.watched = [];
+      AppState.checkins = [];
+      AppState.lastCheckIn = null;
+      AppState.recommendations = [];
+      AppState.lastSummary = "";
+      AppState.selectedTitle = null;
+      AppState.detailsCache = {};
+      AppState.searchResults = [];
+      AppState.lastSearch = { query: "", type: "any", year: "" };
+      AppState.traktAuth = null;
+      AppState.traktDevice = null;
+      AppState.detailBackView = "recommendations";
+      AppState.detailBackLabel = "Back to picks";
+      AppState.lastExternal = null;
+      AppState.externalBlurred = false;
+      AppState.firestoreLoaded = false;
+
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+
+      if ("caches" in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        } catch {}
+      }
+
+      Router.navigate("welcome");
     },
 
     async handleGoogleSignIn() {
@@ -1271,6 +1321,23 @@
         Views.showToast("Signed in anonymously");
       } catch (e) {
         if (messageEl) messageEl.textContent = e.message || String(e);
+      }
+    },
+
+    async syncAllDataToFirestore() {
+      const messageEl = document.getElementById("authMessage");
+      if (!AppState.firebaseUser || !AppState.firebaseDb) {
+        if (messageEl) messageEl.textContent = "Sign in first to sync data.";
+        Views.showToast("Sign in first");
+        return;
+      }
+
+      try {
+        await Views.saveUserDataToFirestore(true);
+        if (messageEl) messageEl.textContent = "All data synced to cloud.";
+        Views.showToast("Synced to cloud");
+      } catch (e) {
+        if (messageEl) messageEl.textContent = `Cloud sync error: ${e.message || e}`;
       }
     },
 
@@ -1306,12 +1373,20 @@
             AppState.watched = Views.mergeByKey(AppState.watched, data.watched);
             Storage.set("watched", AppState.watched);
           }
+          if (Array.isArray(data.checkins)) {
+            AppState.checkins = data.checkins;
+            Storage.set("checkins", AppState.checkins);
+          }
         } else {
           await Views.saveUserDataToFirestore(true);
         }
 
         AppState.firestoreLoaded = true;
-        Router.navigate(AppState.currentView);
+        if (AppState.currentView === "login") {
+          Router.navigate(AppState.user ? "check-in" : "onboarding");
+        } else {
+          Router.navigate(AppState.currentView);
+        }
       } catch (e) {
         const messageEl = document.getElementById("authMessage");
         if (messageEl) messageEl.textContent = `Firestore load error: ${e.message || e}`;
@@ -1337,6 +1412,7 @@
           user_profile: AppState.user || null,
           watchlist: AppState.watchlist || [],
           watched: AppState.watched || [],
+          checkins: AppState.checkins || [],
           updated_at: new Date().toISOString()
         };
         await ref.set(payload, { merge: true });
@@ -1369,12 +1445,65 @@
             <button class="btn btn-primary" onclick="Router.navigate('onboarding')">
               Get Started
             </button>
-            <button class="btn btn-secondary" onclick="Router.navigate('settings')">
+            <button class="btn btn-secondary" onclick="Router.navigate('login')">
               Log in
             </button>
           </div>
         </div>
       `;
+    },
+
+    login() {
+      return `
+        <div class="center-block">
+          <h2 class="responsive-heading" style="margin-bottom:1rem;">Log in</h2>
+          <p class="small-text" style="margin-bottom:1.2rem;">
+            Sign in with your existing account.
+          </p>
+          <div class="card">
+            <p class="small-text" id="authStatus">Not signed in.</p>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input id="authEmail" class="form-input" type="email" placeholder="you@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input id="authPassword" class="form-input" type="password" placeholder="********">
+            </div>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="authSignInBtn">Log in</button>
+              <button class="btn btn-secondary" id="authGoogleBtn">Continue with Google</button>
+            </div>
+            <div id="authMessage" class="small-text" style="margin-top:.8rem;"></div>
+            <div style="margin-top:.9rem;">
+              <button class="btn btn-ghost" onclick="Router.navigate('onboarding')">Need an account? Get started</button>
+            </div>
+          </div>
+        </div>
+      `;
+    },
+
+    initLogin() {
+      const authSignInBtn = document.getElementById("authSignInBtn");
+      const authGoogleBtn = document.getElementById("authGoogleBtn");
+      const authEmail = document.getElementById("authEmail");
+      const authPassword = document.getElementById("authPassword");
+
+      if (authSignInBtn) authSignInBtn.addEventListener("click", () => Views.handleSignIn());
+      if (authGoogleBtn) authGoogleBtn.addEventListener("click", () => Views.handleGoogleSignIn());
+
+      if (authEmail) {
+        authEmail.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") Views.handleSignIn();
+        });
+      }
+      if (authPassword) {
+        authPassword.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") Views.handleSignIn();
+        });
+      }
+
+      Views.renderAuthUi();
     },
 
     onboarding() {
@@ -2750,6 +2879,7 @@
       const authSignOutBtn = document.getElementById("authSignOutBtn");
       const authGoogleBtn = document.getElementById("authGoogleBtn");
       const authAnonBtn = document.getElementById("authAnonBtn");
+      const firestoreSyncBtn = document.getElementById("firestoreSyncBtn");
 
       if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
       if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
@@ -2761,6 +2891,7 @@
       if (authSignOutBtn) authSignOutBtn.addEventListener("click", () => Views.handleSignOut());
       if (authGoogleBtn) authGoogleBtn.addEventListener("click", () => Views.handleGoogleSignIn());
       if (authAnonBtn) authAnonBtn.addEventListener("click", () => Views.handleAnonymousSignIn());
+      if (firestoreSyncBtn) firestoreSyncBtn.addEventListener("click", () => Views.syncAllDataToFirestore());
 
       Views.renderTraktUi();
       Views.renderAuthUi();
@@ -3073,6 +3204,7 @@
               <button class="btn btn-secondary" id="authSignOutBtn">Sign out</button>
               <button class="btn btn-secondary" id="authGoogleBtn">Sign in with Google</button>
               <button class="btn btn-secondary" id="authAnonBtn">Continue anonymously</button>
+              <button class="btn btn-secondary" id="firestoreSyncBtn">Sync all data to cloud</button>
             </div>
             <div id="authMessage" class="small-text" style="margin-top:.6rem;"></div>
           </div>
@@ -3112,6 +3244,7 @@
     clearHistory() {
       AppState.checkins = [];
       Storage.set("checkins", []);
+      Views.scheduleFirestoreSave();
       Views.showToast("History cleared");
       Router.navigate("settings");
     },
