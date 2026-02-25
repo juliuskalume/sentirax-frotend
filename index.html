@@ -2315,6 +2315,10 @@
         Views.showToast("Marked as unwatched");
         Views.syncWatchedRemovalToTrakt(tracked);
       } else {
+        if (item.type === "show" && item.tmdb_id) {
+          Views.handlePromptMarkAsWatched(item);
+          return;
+        }
         Views.markWatchedWithSync(item);
       }
 
@@ -2466,6 +2470,7 @@
           <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-bottom:.7rem;">
             <label class="small-text" for="seriesSeasonSelect" style="min-width:48px;">Season</label>
             <select id="seriesSeasonSelect" class="form-input" style="max-width:220px;"></select>
+            <button class="btn btn-secondary" type="button" data-role="selectAllSeasons">Select all seasons</button>
             <button class="btn btn-secondary" type="button" data-role="selectAllSeason">Select all in season</button>
             <button class="btn btn-secondary" type="button" data-role="clearSeasonSelection">Clear season selection</button>
           </div>
@@ -2482,12 +2487,13 @@
       const seasonSelect = overlay.querySelector("#seriesSeasonSelect");
       const episodeListEl = overlay.querySelector("#seriesEpisodeList");
       const errorEl = overlay.querySelector("#seriesWatchError");
+      const selectAllSeasonsBtn = overlay.querySelector('[data-role="selectAllSeasons"]');
       const selectAllBtn = overlay.querySelector('[data-role="selectAllSeason"]');
       const clearBtn = overlay.querySelector('[data-role="clearSeasonSelection"]');
       const cancelBtn = overlay.querySelector('[data-role="cancel"]');
       const confirmBtn = overlay.querySelector('[data-role="confirm"]');
 
-      if (!seasonSelect || !episodeListEl || !errorEl || !selectAllBtn || !clearBtn || !cancelBtn || !confirmBtn) {
+      if (!seasonSelect || !episodeListEl || !errorEl || !selectAllSeasonsBtn || !selectAllBtn || !clearBtn || !cancelBtn || !confirmBtn) {
         overlay.remove();
         return;
       }
@@ -2537,6 +2543,22 @@
       };
 
       seasonSelect.addEventListener("change", renderEpisodeList);
+
+      selectAllSeasonsBtn.addEventListener("click", () => {
+        selectedBySeason.clear();
+        seasons.forEach((season) => {
+          const seasonNumber = Number(season.season_number);
+          if (!Number.isFinite(seasonNumber)) return;
+          const set = new Set(
+            (Array.isArray(season.episodes) ? season.episodes : [])
+              .map((ep) => Number(ep.episode_number))
+              .filter((num) => Number.isFinite(num) && num > 0)
+          );
+          if (set.size) selectedBySeason.set(seasonNumber, set);
+        });
+        errorEl.textContent = "";
+        renderEpisodeList();
+      });
 
       selectAllBtn.addEventListener("click", () => {
         const season = seasons.find((s) => Number(s.season_number) === Number(seasonSelect.value));
@@ -2771,8 +2793,12 @@
           Views.showToast("Marked as unwatched");
           Views.syncWatchedRemovalToTrakt(tracked);
         } else {
-          Views.markWatchedWithSync(title);
-          btn.textContent = "✅ Watched";
+          if (title.type === "show" && title.tmdb_id) {
+            Views.handlePromptMarkAsWatched(title);
+          } else {
+            Views.markWatchedWithSync(title);
+            btn.textContent = "✅ Watched";
+          }
         }
       });
     },
