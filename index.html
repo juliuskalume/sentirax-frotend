@@ -3137,6 +3137,8 @@
         return `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
       } else if (lower.includes("uflix")) {
         return `https://uflix.cc/search?keyword=${encodedTitle}`;
+        } else if (lower.includes("uflix-beta")) {
+        return `https://uflix-beta.vercel.app/search/${encodedTitle}`;
       } else if (lower.includes("soap2day")) {
         return `https://ww25.soap2day.day/?s=${encodedTitle}`;
       } else if (lower.includes("netmirror")) {
@@ -3168,6 +3170,7 @@
         "Roku Channel",
         "Freevee",
         "Uflix",
+        "Uflix-Beta"
         "Soap2Day",
         "NetMirror",
         "Cineb.net",
