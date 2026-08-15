@@ -723,6 +723,217 @@
     .small-text { font-size: 0.82rem; color: var(--text-muted); }
     .error-text { font-size: 0.8rem; color: #fecaca; margin-top: 0.4rem; }
 
+    .history-dashboard {
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 0.4rem 0 2rem;
+    }
+    @media (min-width: 900px) {
+      .history-dashboard { max-width: 760px; }
+    }
+    .history-topbar {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 1rem;
+    }
+    .history-back {
+      flex: 0 0 auto;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid #2a2a2a;
+      background: #111827;
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+    .history-current-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: #111827;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 0.8rem;
+      margin-bottom: 1.7rem;
+    }
+    .history-thumb-small {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      background: #374151;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: 0.75rem;
+      flex: 0 0 auto;
+    }
+    .history-thumb-small img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .history-title-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.98rem;
+      color: #f9fafb;
+      font-weight: 600;
+    }
+    .history-meta-row,
+    .history-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .history-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      padding: 0.12rem 0.45rem;
+      font-size: 0.62rem;
+      font-weight: 700;
+      line-height: 1.3;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .history-pill-green { background: #22c55e; color: #022c22; }
+    .history-pill-blue { background: #3b82f6; color: white; }
+    .history-pill-gray { background: #374151; color: #d1d5db; }
+    .history-section {
+      margin-bottom: 1.9rem;
+    }
+    .history-section-title {
+      margin-bottom: 0.35rem;
+      color: #f9fafb;
+    }
+    .history-section-title h3 {
+      font-size: 1.25rem;
+      margin: 0;
+    }
+    .history-chart {
+      height: 136px;
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      border-left: 1px solid #333;
+      border-bottom: 1px solid #333;
+      padding: 0.45rem 0.3rem 0.3rem 1.35rem;
+      position: relative;
+    }
+    .history-y-axis {
+      position: absolute;
+      left: 0.15rem;
+      top: 0.2rem;
+      bottom: 0.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 1rem;
+      color: #6b7280;
+      font-size: 0.58rem;
+    }
+    .history-bar {
+      flex: 1;
+      min-width: 4px;
+      background: rgba(229, 231, 235, 0.82);
+      border-radius: 2px 2px 0 0;
+    }
+    .history-genre-bar {
+      height: 24px;
+      display: flex;
+      overflow: hidden;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+    }
+    .history-genre-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem 0.9rem;
+    }
+    .history-genre-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .history-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      margin-top: 0.3rem;
+      flex: 0 0 auto;
+    }
+    .history-link-list {
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0b1220;
+    }
+    .history-link-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 0.95rem;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .history-link-row:last-child { border-bottom: 0; }
+    .history-recent-strip {
+      display: flex;
+      gap: 0.8rem;
+      overflow-x: auto;
+      padding-bottom: 0.6rem;
+      scrollbar-width: none;
+    }
+    .history-recent-strip::-webkit-scrollbar { display: none; }
+    .history-poster-card {
+      width: 118px;
+      flex: 0 0 118px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: #111827;
+      overflow: hidden;
+    }
+    .history-poster {
+      height: 158px;
+      background: linear-gradient(180deg, #374151, #111827);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 0.75rem;
+      position: relative;
+    }
+    .history-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .history-progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 4px;
+      background: var(--danger);
+    }
+    .history-settings-card {
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease;
+    }
+    .history-settings-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34,197,94,0.5);
+    }
+
     .hidden { display: none !important; }
 
     .wiki-fullscreen-controls {
@@ -1155,6 +1366,9 @@
         case "settings":
           main.innerHTML = Views.settings();
           Views.initSettings();
+          break;
+        case "history-dashboard":
+          main.innerHTML = Views.historyDashboard();
           break;
         default:
           main.innerHTML = "<p>View not found</p>";
@@ -3353,6 +3567,7 @@
       const authGoogleBtn = document.getElementById("authGoogleBtn");
       const authAnonBtn = document.getElementById("authAnonBtn");
       const firestoreSyncBtn = document.getElementById("firestoreSyncBtn");
+      const historyDashboardBtn = document.getElementById("historyDashboardBtn");
 
       if (connectBtn) connectBtn.addEventListener("click", () => Views.startTraktConnect());
       if (disconnectBtn) disconnectBtn.addEventListener("click", () => Views.disconnectTrakt());
@@ -3367,6 +3582,15 @@
       if (authGoogleBtn) authGoogleBtn.addEventListener("click", () => Views.handleGoogleSignIn());
       if (authAnonBtn) authAnonBtn.addEventListener("click", () => Views.handleAnonymousSignIn());
       if (firestoreSyncBtn) firestoreSyncBtn.addEventListener("click", () => Views.syncAllDataToFirestore());
+      if (historyDashboardBtn) {
+        historyDashboardBtn.addEventListener("click", () => Router.navigate("history-dashboard"));
+        historyDashboardBtn.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            Router.navigate("history-dashboard");
+          }
+        });
+      }
 
       Views.renderTraktUi();
       Views.renderAuthUi();
@@ -3678,6 +3902,309 @@
       }
     },
 
+    escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    },
+
+    getTitleName(item) {
+      return item?.name || item?.title || item?.original_title || item?.original_name || "Untitled";
+    },
+
+    getPosterUrl(item, size = "w342") {
+      if (!item || !item.poster_path) return "";
+      if (/^https?:\/\//i.test(item.poster_path)) return item.poster_path;
+      return `https://image.tmdb.org/t/p/${size}${item.poster_path}`;
+    },
+
+    parseHistoryDate(value) {
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    },
+
+    countWatchedEpisodes(item) {
+      if (!item || item.type !== "show") return 0;
+      const seasons = Array.isArray(item.seasons) ? item.seasons : [];
+      return seasons.reduce((total, season) => {
+        const episodes = Array.isArray(season?.episodes) ? season.episodes : [];
+        return total + episodes.length;
+      }, 0);
+    },
+
+    estimateWatchMinutes(item) {
+      if (!item) return 0;
+      if (item.type === "show") {
+        const episodes = Views.countWatchedEpisodes(item);
+        return episodes ? episodes * 42 : 42;
+      }
+      return Number(item.runtime_minutes || item.runtime || 105) || 105;
+    },
+
+    formatHistoryDuration(minutes) {
+      const safe = Math.max(0, Math.round(minutes || 0));
+      const days = Math.floor(safe / 1440);
+      const hours = Math.floor((safe % 1440) / 60);
+      const mins = safe % 60;
+      if (days > 0) return `${days}d ${hours}h ${mins}m`;
+      if (hours > 0) return `${hours}h ${mins}m`;
+      return `${mins}m`;
+    },
+
+    buildHistoryAnalytics() {
+      const watched = Array.isArray(AppState.watched) ? AppState.watched : [];
+      const watchlist = Array.isArray(AppState.watchlist) ? AppState.watchlist : [];
+      const checkins = Array.isArray(AppState.checkins) ? AppState.checkins : [];
+      const now = new Date();
+      const start30 = new Date(now);
+      start30.setDate(now.getDate() - 29);
+      start30.setHours(0, 0, 0, 0);
+
+      const watchedWithDates = watched
+        .map((item, index) => ({
+          item,
+          date: Views.parseHistoryDate(item.watched_at || item.last_watched_at || item.updated_at),
+          index
+        }))
+        .sort((a, b) => {
+          const aTime = a.date ? a.date.getTime() : 0;
+          const bTime = b.date ? b.date.getTime() : 0;
+          return bTime - aTime || b.index - a.index;
+        });
+
+      const watched30 = watchedWithDates.filter(entry => !entry.date || entry.date >= start30);
+      const moviePlays = watched30.filter(entry => entry.item.type !== "show").length;
+      const showPlays = watched30.filter(entry => entry.item.type === "show").length;
+      const episodePlays = watched30.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
+      const totalMinutes = watched30.reduce((sum, entry) => sum + Views.estimateWatchMinutes(entry.item), 0);
+
+      const dailyCounts = Array.from({ length: 30 }, (_, index) => {
+        const day = new Date(start30);
+        day.setDate(start30.getDate() + index);
+        const key = day.toISOString().slice(0, 10);
+        let count = 0;
+        watchedWithDates.forEach(entry => {
+          if (entry.date && entry.date.toISOString().slice(0, 10) === key) count += 1;
+        });
+        checkins.forEach(entry => {
+          const checkDate = Views.parseHistoryDate(entry.ts);
+          if (checkDate && checkDate.toISOString().slice(0, 10) === key) count += 1;
+        });
+        return count;
+      });
+
+      const genreMap = new Map();
+      watched.forEach(item => {
+        (Array.isArray(item.genres) ? item.genres : []).forEach(genre => {
+          const label = String(genre || "").trim();
+          if (!label) return;
+          const existing = genreMap.get(label) || { label, count: 0, movies: 0, shows: 0, episodes: 0 };
+          existing.count += 1;
+          if (item.type === "show") {
+            existing.shows += 1;
+            existing.episodes += Views.countWatchedEpisodes(item);
+          } else {
+            existing.movies += 1;
+          }
+          genreMap.set(label, existing);
+        });
+      });
+
+      if (!genreMap.size && AppState.user?.liked_genres?.length) {
+        AppState.user.liked_genres.forEach((genre, index) => {
+          genreMap.set(genre, {
+            label: genre,
+            count: Math.max(1, AppState.user.liked_genres.length - index),
+            movies: 0,
+            shows: 0,
+            episodes: 0
+          });
+        });
+      }
+
+      const palette = ["#0ea5e9", "#3b82f6", "#f97316", "#ef4444", "#eab308", "#22c55e", "#8b5cf6", "#ec4899", "#64748b"];
+      const genres = Array.from(genreMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 9)
+        .map((genre, index) => ({
+          ...genre,
+          color: palette[index % palette.length],
+          weight: Math.max(1, genre.count)
+        }));
+
+      if (!genres.length) {
+        ["Drama", "Comedy", "Mystery", "Documentary"].forEach((label, index) => {
+          genres.push({
+            label,
+            count: 1,
+            movies: index === 0 ? watched.length : 0,
+            shows: 0,
+            episodes: 0,
+            color: palette[index],
+            weight: 1
+          });
+        });
+      }
+
+      const current = watchedWithDates[0]?.item || watchlist[0] || AppState.recommendations?.[0] || null;
+      const recent = watchedWithDates.map(entry => entry.item).slice(0, 10);
+
+      return {
+        current,
+        recent: recent.length ? recent : watchlist.slice(0, 10),
+        totalMinutes,
+        moviePlays,
+        showPlays,
+        episodePlays,
+        dailyCounts,
+        genres,
+        checkinCount: checkins.length,
+        watchedCount: watched.length,
+        watchlistCount: watchlist.length,
+        moodAverage: checkins.length
+          ? Math.round((checkins.reduce((sum, c) => sum + Number(c.mood_score || 0), 0) / checkins.length) * 10) / 10
+          : null
+      };
+    },
+
+    historyDashboard() {
+      const data = Views.buildHistoryAnalytics();
+      const maxDaily = Math.max(1, ...data.dailyCounts);
+      const current = data.current;
+      const currentTitle = Views.escapeHtml(current ? Views.getTitleName(current) : "No watched titles yet");
+      const currentType = current?.type === "show" ? "Series" : current ? "Movie" : "New";
+      const currentPoster = current ? Views.getPosterUrl(current, "w185") : "";
+      const currentRating = current?.vote_average
+        ? `${Math.round(Number(current.vote_average) * 10)}%`
+        : data.watchedCount
+          ? `${Math.min(99, Math.max(1, data.watchedCount * 7))}%`
+          : "0%";
+      const genreTotal = data.genres.reduce((sum, genre) => sum + genre.weight, 0) || 1;
+      const barsHtml = data.dailyCounts.map(count => {
+        const pct = Math.max(3, Math.round((count / maxDaily) * 100));
+        return `<div class="history-bar" style="height:${pct}%;" title="${count} activity item${count === 1 ? "" : "s"}"></div>`;
+      }).join("");
+      const genresHtml = data.genres.map(genre => {
+        const detailParts = [];
+        if (genre.episodes) detailParts.push(`${genre.episodes} episodes`);
+        if (genre.shows) detailParts.push(`${genre.shows} show${genre.shows === 1 ? "" : "s"}`);
+        if (genre.movies) detailParts.push(`${genre.movies} movie${genre.movies === 1 ? "" : "s"}`);
+        if (!detailParts.length) detailParts.push(`${genre.count} saved preference${genre.count === 1 ? "" : "s"}`);
+        return `
+          <div class="history-genre-item">
+            <span class="history-dot" style="background:${genre.color};"></span>
+            <div>
+              <div style="font-size:.68rem;font-weight:700;color:#e5e7eb;text-transform:uppercase;letter-spacing:.06em;">${Views.escapeHtml(genre.label)}</div>
+              <div class="small-text" style="font-size:.68rem;line-height:1.35;">${Views.escapeHtml(detailParts.join(" / "))}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+      const genreBarHtml = data.genres.map(genre => {
+        const pct = (genre.weight / genreTotal) * 100;
+        return `<div style="width:${pct}%;background:${genre.color};" title="${Views.escapeHtml(genre.label)}"></div>`;
+      }).join("");
+      const recentHtml = data.recent.length
+        ? data.recent.map((item, index) => {
+            const poster = Views.getPosterUrl(item, "w342");
+            const title = Views.escapeHtml(Views.getTitleName(item));
+            const type = item.type === "show" ? "Series" : "Movie";
+            const progress = index === 0 ? 72 : Math.max(18, 82 - index * 8);
+            return `
+              <div class="history-poster-card">
+                <div class="history-poster">
+                  ${poster ? `<img src="${poster}" alt="${title} poster" loading="lazy">` : "<span>No poster</span>"}
+                  <span class="history-progress" style="width:${progress}%;"></span>
+                </div>
+                <div style="padding:.55rem;">
+                  <div class="history-title-line" style="font-size:.78rem;">${title}</div>
+                  <div class="small-text" style="font-size:.68rem;">${type}</div>
+                </div>
+              </div>
+            `;
+          }).join("")
+        : `<div class="card" style="min-width:220px;margin:0;"><p class="small-text">Mark movies or shows as watched to populate this row.</p></div>`;
+
+      return `
+        <div class="history-dashboard">
+          <div class="history-topbar">
+            <button class="history-back" onclick="Router.navigate('settings')" aria-label="Back to settings">&larr;</button>
+            <div>
+              <h2 class="responsive-heading" style="margin:0;">History Dashboard</h2>
+              <p class="small-text">Your SentiraX viewing history and mood analytics.</p>
+            </div>
+          </div>
+
+          <section class="history-current-card">
+            <div style="display:flex;align-items:center;gap:.75rem;min-width:0;">
+              <div class="history-thumb-small">
+                ${currentPoster ? `<img src="${currentPoster}" alt="${currentTitle} poster">` : "<span>Art</span>"}
+              </div>
+              <div style="min-width:0;">
+                <div class="history-title-line">${currentTitle}</div>
+                <div class="history-meta-row" style="margin-top:.28rem;">
+                  <span class="history-pill history-pill-green">Watched</span>
+                  <span class="history-pill history-pill-blue">${Views.escapeHtml(currentType)}</span>
+                  <span class="small-text">${Views.escapeHtml(currentRating)}</span>
+                </div>
+              </div>
+            </div>
+            <span class="history-pill history-pill-gray">New</span>
+          </section>
+
+          <section class="history-section">
+            <div class="history-section-title">
+              <span style="color:#9ca3af;">|</span>
+              <h3>Last 30 Days</h3>
+            </div>
+            <p class="small-text" style="margin-bottom:.75rem;">
+              ${Views.formatHistoryDuration(data.totalMinutes)} watched - ${data.episodePlays} episodes - ${data.moviePlays} movies - ${data.checkinCount} mood check-ins
+            </p>
+            <div class="history-chart" aria-label="Last 30 days activity chart">
+              <div class="history-y-axis"><span>${maxDaily}</span><span>${Math.ceil(maxDaily / 2)}</span><span>1</span><span>0</span></div>
+              ${barsHtml}
+            </div>
+          </section>
+
+          <section class="history-section">
+            <div class="history-genre-bar">${genreBarHtml}</div>
+            <div class="history-genre-list">${genresHtml}</div>
+          </section>
+
+          <section class="history-section">
+            <div class="history-link-list">
+              <div class="history-link-row">
+                <div>
+                  <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:#d1d5db;">Yearly Stats</div>
+                  <p class="small-text">Mood average: ${data.moodAverage ?? "n/a"} - Watchlist: ${data.watchlistCount}</p>
+                </div>
+                <span style="color:#9ca3af;">&rsaquo;</span>
+              </div>
+              <div class="history-link-row">
+                <div>
+                  <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:#d1d5db;">All Time Stats</div>
+                  <p class="small-text">${data.watchedCount} watched titles tracked in this browser.</p>
+                </div>
+                <span style="color:#9ca3af;">&rsaquo;</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="history-section">
+            <div class="history-section-title">
+              <span style="color:#9ca3af;">o</span>
+              <h3>Recently Watched</h3>
+            </div>
+            <div class="history-recent-strip">${recentHtml}</div>
+          </section>
+        </div>
+      `;
+    },
+
     settings() {
       const user = AppState.user;
       return `
@@ -3694,11 +4221,16 @@
               <p class="small-text"><strong>Allow 18+:</strong> ${user.allow_adult ? "Yes (18+)" : "No"}</p>
             ` : `<p class="small-text">No profile yet. Complete onboarding to set one.</p>`}
           </div>
-          <div class="card">
+          <div class="card history-settings-card" id="historyDashboardBtn" role="button" tabindex="0">
             <div class="section-label">Usage</div>
-            <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
-            <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
-            <p class="small-text"><strong>Watched items:</strong> ${AppState.watched.length}</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+              <div>
+                <p class="small-text"><strong>Mood check-ins:</strong> ${AppState.checkins.length}</p>
+                <p class="small-text"><strong>Watchlist items:</strong> ${AppState.watchlist.length}</p>
+                <p class="small-text"><strong>Watched items:</strong> ${AppState.watched.length}</p>
+              </div>
+              <span style="color:var(--accent);font-size:1.4rem;">&rsaquo;</span>
+            </div>
           </div>
           <div class="card">
             <div class="section-label">Account</div>
