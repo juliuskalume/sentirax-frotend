@@ -950,13 +950,6 @@
       height: 100%;
       object-fit: cover;
     }
-    .history-progress {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      height: 4px;
-      background: var(--danger);
-    }
     .history-settings-card {
       cursor: pointer;
       transition: transform 0.12s ease, border-color 0.12s ease;
@@ -1208,6 +1201,7 @@
     traktDevice: null,
     detailBackView: "recommendations",
     detailBackLabel: "Back to picks",
+    historyRange: 30,
     lastExternal: null,
     externalBlurred: false,
     firebaseUser: null,
@@ -3989,14 +3983,15 @@
       return `${mins}m`;
     },
 
-    buildHistoryAnalytics() {
+    buildHistoryAnalytics(rangeDays = AppState.historyRange || 30) {
       const watched = Array.isArray(AppState.watched) ? AppState.watched : [];
       const watchlist = Array.isArray(AppState.watchlist) ? AppState.watchlist : [];
       const checkins = Array.isArray(AppState.checkins) ? AppState.checkins : [];
+      const days = Math.max(1, Number(rangeDays) || 30);
       const now = new Date();
-      const start30 = new Date(now);
-      start30.setDate(now.getDate() - 29);
-      start30.setHours(0, 0, 0, 0);
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - (days - 1));
+      startDate.setHours(0, 0, 0, 0);
 
       const watchedWithDates = watched
         .map((item, index) => ({
@@ -4010,15 +4005,15 @@
           return bTime - aTime || b.index - a.index;
         });
 
-      const watched30 = watchedWithDates.filter(entry => !entry.date || entry.date >= start30);
-      const moviePlays = watched30.filter(entry => entry.item.type !== "show").length;
-      const showPlays = watched30.filter(entry => entry.item.type === "show").length;
-      const episodePlays = watched30.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
-      const totalMinutes = watched30.reduce((sum, entry) => sum + Views.estimateWatchMinutes(entry.item), 0);
+      const watchedRange = watchedWithDates.filter(entry => !entry.date || entry.date >= startDate);
+      const moviePlays = watchedRange.filter(entry => entry.item.type !== "show").length;
+      const showPlays = watchedRange.filter(entry => entry.item.type === "show").length;
+      const episodePlays = watchedRange.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
+      const totalMinutes = watchedRange.reduce((sum, entry) => sum + Views.estimateWatchMinutes(entry.item), 0);
 
-      const dailyTimeline = Array.from({ length: 30 }, (_, index) => {
-        const day = new Date(start30);
-        day.setDate(start30.getDate() + index);
+      const dailyTimeline = Array.from({ length: days }, (_, index) => {
+        const day = new Date(startDate);
+        day.setDate(startDate.getDate() + index);
         const key = day.toISOString().slice(0, 10);
         const items = [];
 
@@ -4240,6 +4235,15 @@
     initHistoryDashboard() {
       const data = Views._lastHistoryDashboardData;
       const dayEntries = data?.dailyTimeline || [];
+      const select = document.getElementById("historyPeriodSelect");
+      if (select) {
+        select.value = String(AppState.historyRange || 30);
+        select.onchange = (event) => {
+          const nextRange = Number(event.target.value) || 30;
+          AppState.historyRange = nextRange;
+          Router.navigate("history-dashboard");
+        };
+      }
 
       document.querySelectorAll(".history-bar").forEach((bar, index) => {
         const day = dayEntries[index];
@@ -4307,10 +4311,11 @@
     },
 
     historyDashboard() {
-      const data = Views.buildHistoryAnalytics();
+      const data = Views.buildHistoryAnalytics(AppState.historyRange || 30);
       Views._lastHistoryDashboardData = data;
       const maxDaily = Math.max(1, ...data.dailyCounts);
       const current = data.current;
+      const rangeLabel = AppState.historyRange >= 365 ? "1 year" : `${AppState.historyRange} days`;
       const currentTitle = Views.escapeHtml(current ? Views.getTitleName(current) : "No watched titles yet");
       const currentType = current?.type === "show" ? "Series" : current ? "Movie" : "New";
       const currentPoster = current ? Views.getPosterUrl(current, "w185") : "";
@@ -4358,7 +4363,6 @@
               <div class="history-poster-card" data-item-id="${Views.escapeHtml(String(item.id || item.tmdb_id || ""))}" data-item-type="${Views.escapeHtml(String(item.type || "movie"))}" tabindex="0" role="button" aria-label="Open details for ${title}">
                 <div class="history-poster">
                   ${poster ? `<img src="${poster}" alt="${title} poster" loading="lazy">` : "<span>No poster</span>"}
-                  <span class="history-progress" style="width:${progress}%;"></span>
                 </div>
                 <div style="padding:.55rem;">
                   <div class="history-title-line" style="font-size:.78rem;">${title}</div>
@@ -4380,14 +4384,24 @@
           </div>
 
           <section class="history-section">
-            <div class="history-section-title">
-              <span style="color:#9ca3af;">|</span>
-              <h3>Last 30 Days</h3>
+            <div class="history-section-title" style="justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;">
+                <span style="color:#9ca3af;">|</span>
+                <h3>Last ${rangeLabel}</h3>
+              </div>
+              <select id="historyPeriodSelect" class="form-select" aria-label="Select history range" style="max-width:140px; font-size:.76rem; padding:.42rem .55rem;">
+                <option value="1">1 day</option>
+                <option value="7">7 days</option>
+                <option value="30">30 days</option>
+                <option value="60">60 days</option>
+                <option value="90">90 days</option>
+                <option value="365">1 year</option>
+              </select>
             </div>
             <p class="small-text" style="margin-bottom:.75rem;">
               ${Views.formatHistoryDuration(data.totalMinutes)} watched - ${data.episodePlays} episodes - ${data.moviePlays} movies - ${data.checkinCount} mood check-ins
             </p>
-            <div class="history-chart" aria-label="Last 30 days activity chart">
+            <div class="history-chart" aria-label="Last ${rangeLabel} activity chart">
               <div class="history-y-axis"><span>${maxDaily}</span><span>${Math.ceil(maxDaily / 2)}</span><span>1</span><span>0</span></div>
               ${barsHtml}
             </div>
