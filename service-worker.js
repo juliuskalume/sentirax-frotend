@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = "sentirax-v1";
+const CACHE_NAME = "sentirax-v2";
 const OFFLINE_URLS = [
   "/",                // main shell
   "/index.html",

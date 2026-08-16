@@ -1872,12 +1872,151 @@
       `;
     },
 
-    initOnboarding() {
-      const likedGenres = [
-        "Action", "Comedy", "Drama", "Romance", "Horror",
-        "Thriller", "Sci-Fi", "Fantasy", "Anime", "Documentary",
-        "Crime", "Mystery", "Adventure"
+    getTmdbGenreList() {
+      return [
+        "Action",
+        "Action & Adventure",
+        "Adventure",
+        "Animation",
+        "Comedy",
+        "Crime",
+        "Documentary",
+        "Drama",
+        "Family",
+        "Fantasy",
+        "History",
+        "Horror",
+        "Kids",
+        "Music",
+        "Mystery",
+        "News",
+        "Reality",
+        "Romance",
+        "Science Fiction",
+        "Sci-Fi & Fantasy",
+        "Soap",
+        "Talk",
+        "Thriller",
+        "TV Movie",
+        "War",
+        "War & Politics",
+        "Western"
       ];
+    },
+
+    getTmdbGenreIdMap() {
+      return {
+        28: "Action",
+        12: "Adventure",
+        16: "Animation",
+        35: "Comedy",
+        80: "Crime",
+        99: "Documentary",
+        18: "Drama",
+        10751: "Family",
+        14: "Fantasy",
+        36: "History",
+        27: "Horror",
+        10402: "Music",
+        9648: "Mystery",
+        10749: "Romance",
+        878: "Science Fiction",
+        10770: "TV Movie",
+        53: "Thriller",
+        10752: "War",
+        37: "Western",
+        10759: "Action & Adventure",
+        10762: "Kids",
+        10763: "News",
+        10764: "Reality",
+        10765: "Sci-Fi & Fantasy",
+        10766: "Soap",
+        10767: "Talk",
+        10768: "War & Politics"
+      };
+    },
+
+    normalizeTmdbGenreName(value) {
+      if (value === null || value === undefined || value === "") return null;
+      if (typeof value === "number") {
+        return Views.getTmdbGenreIdMap()[value] || null;
+      }
+
+      const raw = String(value).trim();
+      if (!raw) return null;
+
+      const aliasMap = {
+        action: "Action",
+        "action & adventure": "Action & Adventure",
+        actionadventure: "Action & Adventure",
+        adventure: "Adventure",
+        animation: "Animation",
+        comedy: "Comedy",
+        crime: "Crime",
+        documentary: "Documentary",
+        drama: "Drama",
+        family: "Family",
+        fantasy: "Fantasy",
+        history: "History",
+        horror: "Horror",
+        kids: "Kids",
+        music: "Music",
+        mystery: "Mystery",
+        news: "News",
+        reality: "Reality",
+        romance: "Romance",
+        "science fiction": "Science Fiction",
+        "science-fiction": "Science Fiction",
+        scifi: "Science Fiction",
+        "sci-fi": "Science Fiction",
+        "sci fi": "Science Fiction",
+        "sci-fi & fantasy": "Sci-Fi & Fantasy",
+        "science fiction & fantasy": "Sci-Fi & Fantasy",
+        "science-fiction & fantasy": "Sci-Fi & Fantasy",
+        soap: "Soap",
+        talk: "Talk",
+        thriller: "Thriller",
+        "tv movie": "TV Movie",
+        "tv-movie": "TV Movie",
+        "television movie": "TV Movie",
+        war: "War",
+        "war & politics": "War & Politics",
+        western: "Western"
+      };
+
+      const key = raw.toLowerCase();
+      if (aliasMap[key]) return aliasMap[key];
+      const compactKey = key.replace(/[^a-z0-9]/g, " ").trim();
+      const directMatch = Object.keys(aliasMap).find(alias => alias === compactKey);
+      if (directMatch) return aliasMap[directMatch];
+
+      const match = Object.values(aliasMap).find(label => {
+        const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]/g, " ").trim();
+        return normalizedLabel === compactKey || label.toLowerCase() === key;
+      });
+      return match || raw;
+    },
+
+    getGenreLabelsFromItem(item) {
+      if (!item) return [];
+      const names = [];
+      if (Array.isArray(item.genres)) {
+        item.genres.forEach(genre => {
+          const normalized = Views.normalizeTmdbGenreName(genre);
+          if (normalized) names.push(normalized);
+        });
+      }
+      if (Array.isArray(item.genre_ids)) {
+        item.genre_ids.forEach(genreId => {
+          const normalized = Views.normalizeTmdbGenreName(Number(genreId));
+          if (normalized) names.push(normalized);
+        });
+      }
+      return [...new Set(names)];
+    },
+
+    initOnboarding() {
+      const likedGenres = Views.getTmdbGenreList();
       const goals = [
         "Escape and relax", "Laugh", "Get inspired", "Learn something",
         "Background noise", "Watch with friends", "Date night"
@@ -4055,10 +4194,10 @@
 
       const genreMap = new Map();
       watchedRangeItems.forEach(item => {
-        (Array.isArray(item.genres) ? item.genres : []).forEach(genre => {
-          const label = String(genre || "").trim();
-          if (!label) return;
-          const existing = genreMap.get(label) || { label, count: 0, movies: 0, shows: 0, episodes: 0 };
+        const normalizedGenres = Views.getGenreLabelsFromItem(item);
+
+        normalizedGenres.forEach(genreLabel => {
+          const existing = genreMap.get(genreLabel) || { label: genreLabel, count: 0, movies: 0, shows: 0, episodes: 0 };
           existing.count += 1;
           if (item.type === "show") {
             existing.shows += 1;
@@ -4066,7 +4205,7 @@
           } else {
             existing.movies += 1;
           }
-          genreMap.set(label, existing);
+          genreMap.set(genreLabel, existing);
         });
       });
 
