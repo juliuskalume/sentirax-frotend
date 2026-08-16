@@ -845,6 +845,15 @@
       min-width: 4px;
       background: rgba(229, 231, 235, 0.82);
       border-radius: 2px 2px 0 0;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
+      position: relative;
+    }
+    .history-bar:hover,
+    .history-bar:focus-visible {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+      outline: none;
     }
     .history-genre-bar {
       height: 24px;
@@ -902,6 +911,14 @@
       border: 1px solid #374151;
       background: #111827;
       overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease;
+    }
+    .history-poster-card:hover,
+    .history-poster-card:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(59,130,246,0.7);
+      outline: none;
     }
     .history-poster {
       height: 158px;
@@ -1369,6 +1386,7 @@
           break;
         case "history-dashboard":
           main.innerHTML = Views.historyDashboard();
+          Views.initHistoryDashboard();
           break;
         default:
           main.innerHTML = "<p>View not found</p>";
@@ -1383,6 +1401,7 @@
     _wikiHistoryIndex: 0,
     _traktPollerId: null,
     _firestoreSaveTimer: null,
+    _lastHistoryDashboardData: null,
 
     initFirebase() {
       if (!window.firebase || !firebaseConfig) return;
@@ -3982,20 +4001,46 @@
       const episodePlays = watched30.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
       const totalMinutes = watched30.reduce((sum, entry) => sum + Views.estimateWatchMinutes(entry.item), 0);
 
-      const dailyCounts = Array.from({ length: 30 }, (_, index) => {
+      const dailyTimeline = Array.from({ length: 30 }, (_, index) => {
         const day = new Date(start30);
         day.setDate(start30.getDate() + index);
         const key = day.toISOString().slice(0, 10);
-        let count = 0;
+        const items = [];
+
         watchedWithDates.forEach(entry => {
-          if (entry.date && entry.date.toISOString().slice(0, 10) === key) count += 1;
+          if (entry.date && entry.date.toISOString().slice(0, 10) === key) {
+            items.push({
+              kind: "watch",
+              title: Views.getTitleName(entry.item),
+              item: entry.item,
+              type: entry.item.type === "show" ? "Series" : "Movie"
+            });
+          }
         });
+
         checkins.forEach(entry => {
           const checkDate = Views.parseHistoryDate(entry.ts);
-          if (checkDate && checkDate.toISOString().slice(0, 10) === key) count += 1;
+          if (checkDate && checkDate.toISOString().slice(0, 10) === key) {
+            items.push({
+              kind: "checkin",
+              title: "Mood check-in",
+              item: null,
+              type: "Mood",
+              score: Number(entry.mood_score || 0)
+            });
+          }
         });
-        return count;
+
+        return {
+          key,
+          label: day.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+          date: day,
+          items,
+          count: items.length
+        };
       });
+
+      const dailyCounts = dailyTimeline.map(day => day.count);
 
       const genreMap = new Map();
       watched.forEach(item => {
@@ -4061,6 +4106,7 @@
         showPlays,
         episodePlays,
         dailyCounts,
+        dailyTimeline,
         genres,
         checkinCount: checkins.length,
         watchedCount: watched.length,
@@ -4071,8 +4117,112 @@
       };
     },
 
+    showHistoryDayModal(dateLabel, items = []) {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+
+      const rows = items.length
+        ? items.map(entry => {
+            const title = Views.escapeHtml(entry.title || "Unknown title");
+            const type = entry.item ? (entry.item.type === "show" ? "Series" : "Movie") : "Mood check-in";
+            const suffix = entry.item ? `<span class="small-text"> • ${Views.escapeHtml(type)}</span>` : entry.score ? `<span class="small-text"> • Mood ${Views.escapeHtml(String(entry.score))}/10</span>` : "";
+            const marker = entry.item ? 'data-history-item="true" data-item-id="' + String(entry.item.id || entry.item.tmdb_id || "") + '" data-item-type="' + String(entry.item.type || "movie") + '"' : "";
+            return `<li ${marker} style="cursor:${entry.item ? "pointer" : "default"}; color:#e5e7eb; margin-bottom:.35rem;">${title}${suffix}</li>`;
+          }).join("")
+        : "<li class='small-text'>No watched items recorded for this day.</li>";
+
+      overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 520px; width: min(92vw, 520px);">
+          <h3 style="margin-bottom:.6rem;">${Views.escapeHtml(dateLabel || "Watched items")}</h3>
+          <p class="small-text" style="margin-bottom:1rem;">Watched items on this day</p>
+          <ul style="margin:0;padding-left:1.2rem;line-height:1.6;">${rows}</ul>
+          <button class="btn btn-primary" style="width:100%; margin-top:1rem;" data-role="close">Close</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('[data-role="close"]').addEventListener("click", () => overlay.remove());
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) overlay.remove();
+      });
+
+      overlay.querySelectorAll("[data-history-item='true']").forEach(itemEl => {
+        itemEl.addEventListener("click", () => {
+          const itemId = itemEl.getAttribute("data-item-id");
+          const itemType = itemEl.getAttribute("data-item-type");
+          const item = (Views._lastHistoryDashboardData?.dailyTimeline || []).flatMap(day => day.items)
+            .map(entry => entry.item)
+            .filter(Boolean)
+            .find(title => {
+              const matchId = itemId ? String(title.id || title.tmdb_id) === String(itemId) : true;
+              const matchType = itemType ? String(title.type) === String(itemType) : true;
+              return matchId && matchType;
+            });
+          if (!item) return;
+          AppState.selectedTitle = item;
+          Router.navigate("detail", {
+            title: item,
+            backView: "history-dashboard",
+            backLabel: "Back to history"
+          });
+        });
+      });
+    },
+
+    initHistoryDashboard() {
+      const data = Views._lastHistoryDashboardData;
+      const dayEntries = data?.dailyTimeline || [];
+
+      document.querySelectorAll(".history-bar").forEach((bar, index) => {
+        const day = dayEntries[index];
+        const items = day?.items || [];
+        const labels = items.map(entry => entry.title || "Watched item").filter(Boolean);
+        bar.setAttribute("tabindex", "0");
+        bar.setAttribute("role", "button");
+        bar.setAttribute("aria-label", day ? `${day.label}: ${items.length} items` : "History activity bar");
+        bar.title = labels.length ? labels.join("\n") : "No watched items for this day";
+
+        const openDay = () => Views.showHistoryDayModal(day?.label || "Watched items", items);
+        bar.onclick = openDay;
+        bar.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openDay();
+          }
+        };
+      });
+
+      document.querySelectorAll(".history-poster-card").forEach(card => {
+        const itemId = card.dataset.itemId;
+        const itemType = card.dataset.itemType;
+        const item = data?.recent?.find(entry => String(entry.id) === String(itemId) || (itemType && entry.type === itemType && String(entry.id) === String(itemId))) || null;
+        if (!item) return;
+
+        const openDetail = () => {
+          AppState.selectedTitle = item;
+          Router.navigate("detail", {
+            title: item,
+            backView: "history-dashboard",
+            backLabel: "Back to history"
+          });
+        };
+
+        card.onclick = openDetail;
+        card.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openDetail();
+          }
+        };
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("role", "button");
+        card.setAttribute("aria-label", `Open details for ${Views.getTitleName(item)}`);
+      });
+    },
+
     historyDashboard() {
       const data = Views.buildHistoryAnalytics();
+      Views._lastHistoryDashboardData = data;
       const maxDaily = Math.max(1, ...data.dailyCounts);
       const current = data.current;
       const currentTitle = Views.escapeHtml(current ? Views.getTitleName(current) : "No watched titles yet");
@@ -4084,9 +4234,13 @@
           ? `${Math.min(99, Math.max(1, data.watchedCount * 7))}%`
           : "0%";
       const genreTotal = data.genres.reduce((sum, genre) => sum + genre.weight, 0) || 1;
-      const barsHtml = data.dailyCounts.map(count => {
-        const pct = Math.max(3, Math.round((count / maxDaily) * 100));
-        return `<div class="history-bar" style="height:${pct}%;" title="${count} activity item${count === 1 ? "" : "s"}"></div>`;
+      const barsHtml = data.dailyTimeline.map((entry, index) => {
+        const pct = Math.max(3, Math.round((entry.count / maxDaily) * 100));
+        const label = entry.label || `Day ${index + 1}`;
+        const tooltip = entry.items.length
+          ? entry.items.map(item => item.title || "Watched item").join("\n")
+          : "No watched items";
+        return `<div class="history-bar" data-index="${index}" aria-label="${Views.escapeHtml(label)}" title="${Views.escapeHtml(tooltip)}" style="height:${pct}%;"></div>`;
       }).join("");
       const genresHtml = data.genres.map(genre => {
         const detailParts = [];
@@ -4115,7 +4269,7 @@
             const type = item.type === "show" ? "Series" : "Movie";
             const progress = index === 0 ? 72 : Math.max(18, 82 - index * 8);
             return `
-              <div class="history-poster-card">
+              <div class="history-poster-card" data-item-id="${Views.escapeHtml(String(item.id || item.tmdb_id || ""))}" data-item-type="${Views.escapeHtml(String(item.type || "movie"))}" tabindex="0" role="button" aria-label="Open details for ${title}">
                 <div class="history-poster">
                   ${poster ? `<img src="${poster}" alt="${title} poster" loading="lazy">` : "<span>No poster</span>"}
                   <span class="history-progress" style="width:${progress}%;"></span>
@@ -4173,25 +4327,6 @@
           <section class="history-section">
             <div class="history-genre-bar">${genreBarHtml}</div>
             <div class="history-genre-list">${genresHtml}</div>
-          </section>
-
-          <section class="history-section">
-            <div class="history-link-list">
-              <div class="history-link-row">
-                <div>
-                  <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:#d1d5db;">Yearly Stats</div>
-                  <p class="small-text">Mood average: ${data.moodAverage ?? "n/a"} - Watchlist: ${data.watchlistCount}</p>
-                </div>
-                <span style="color:#9ca3af;">&rsaquo;</span>
-              </div>
-              <div class="history-link-row">
-                <div>
-                  <div style="font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;color:#d1d5db;">All Time Stats</div>
-                  <p class="small-text">${data.watchedCount} watched titles tracked in this browser.</p>
-                </div>
-                <span style="color:#9ca3af;">&rsaquo;</span>
-              </div>
-            </div>
           </section>
 
           <section class="history-section">
