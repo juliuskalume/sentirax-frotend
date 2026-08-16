@@ -4006,6 +4006,7 @@
         });
 
       const watchedRange = watchedWithDates.filter(entry => !entry.date || entry.date >= startDate);
+      const watchedRangeItems = watchedRange.map(entry => entry.item);
       const moviePlays = watchedRange.filter(entry => entry.item.type !== "show").length;
       const showPlays = watchedRange.filter(entry => entry.item.type === "show").length;
       const episodePlays = watchedRange.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
@@ -4053,7 +4054,7 @@
       const dailyCounts = dailyTimeline.map(day => day.count);
 
       const genreMap = new Map();
-      watched.forEach(item => {
+      watchedRangeItems.forEach(item => {
         (Array.isArray(item.genres) ? item.genres : []).forEach(genre => {
           const label = String(genre || "").trim();
           if (!label) return;
