@@ -858,10 +858,25 @@
     .history-genre-bar {
       height: 24px;
       display: flex;
+      width: 100%;
       overflow: hidden;
       border-radius: 6px;
       margin-bottom: 1rem;
       box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+      min-width: 0;
+    }
+    .history-genre-segment {
+      flex: 1 1 0;
+      min-width: 0;
+      cursor: pointer;
+      transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+      position: relative;
+    }
+    .history-genre-segment:hover,
+    .history-genre-segment:focus-visible {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      outline: none;
     }
     .history-genre-list {
       display: grid;
@@ -4075,11 +4090,15 @@
       const genres = Array.from(genreMap.values())
         .sort((a, b) => b.count - a.count)
         .slice(0, 9)
-        .map((genre, index) => ({
-          ...genre,
-          color: palette[index % palette.length],
-          weight: Math.max(1, genre.count)
-        }));
+        .map((genre, index) => {
+          const items = watched.filter(item => (Array.isArray(item.genres) ? item.genres : []).includes(genre.label));
+          return {
+            ...genre,
+            color: palette[index % palette.length],
+            weight: Math.max(1, genre.count),
+            items
+          };
+        });
 
       if (!genres.length) {
         ["Drama", "Comedy", "Mystery", "Documentary"].forEach((label, index) => {
@@ -4090,7 +4109,8 @@
             shows: 0,
             episodes: 0,
             color: palette[index],
-            weight: 1
+            weight: 1,
+            items: watched.filter(item => (Array.isArray(item.genres) ? item.genres : []).includes(label))
           });
         });
       }
@@ -4169,6 +4189,54 @@
       });
     },
 
+    showHistoryGenreModal(genreLabel, items = []) {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+
+      const rows = items.length
+        ? items.map(item => {
+            const title = Views.escapeHtml(Views.getTitleName(item));
+            const type = item.type === "show" ? "Series" : "Movie";
+            const clickAttr = `data-genre-item="true" data-item-id="${String(item.id || item.tmdb_id || "")}" data-item-type="${String(item.type || "movie")}"`;
+            return `<li ${clickAttr} style="cursor:pointer; color:#e5e7eb; margin-bottom:.35rem;">${title} <span class="small-text">• ${Views.escapeHtml(type)}</span></li>`;
+          }).join("")
+        : "<li class='small-text'>No watched titles recorded for this genre yet.</li>";
+
+      overlay.innerHTML = `
+        <div class="modal-content" style="max-width: 520px; width: min(92vw, 520px);">
+          <h3 style="margin-bottom:.6rem;">${Views.escapeHtml(genreLabel || "Genre")}</h3>
+          <p class="small-text" style="margin-bottom:1rem;">Watched titles in this genre</p>
+          <ul style="margin:0;padding-left:1.2rem;line-height:1.6;">${rows}</ul>
+          <button class="btn btn-primary" style="width:100%; margin-top:1rem;" data-role="close">Close</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('[data-role="close"]').addEventListener("click", () => overlay.remove());
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) overlay.remove();
+      });
+
+      overlay.querySelectorAll("[data-genre-item='true']").forEach(itemEl => {
+        itemEl.addEventListener("click", () => {
+          const itemId = itemEl.getAttribute("data-item-id");
+          const itemType = itemEl.getAttribute("data-item-type");
+          const item = (Views._lastHistoryDashboardData?.genres || []).flatMap(genre => genre.items || []).find(title => {
+            const matchId = itemId ? String(title.id || title.tmdb_id) === String(itemId) : true;
+            const matchType = itemType ? String(title.type) === String(itemType) : true;
+            return matchId && matchType;
+          });
+          if (!item) return;
+          AppState.selectedTitle = item;
+          Router.navigate("detail", {
+            title: item,
+            backView: "history-dashboard",
+            backLabel: "Back to history"
+          });
+        });
+      });
+    },
+
     initHistoryDashboard() {
       const data = Views._lastHistoryDashboardData;
       const dayEntries = data?.dailyTimeline || [];
@@ -4218,6 +4286,24 @@
         card.setAttribute("role", "button");
         card.setAttribute("aria-label", `Open details for ${Views.getTitleName(item)}`);
       });
+
+      document.querySelectorAll(".history-genre-segment").forEach(segment => {
+        const label = segment.dataset.genre;
+        const genre = (data?.genres || []).find(item => item.label === label);
+        const items = genre?.items || [];
+        const openGenre = () => Views.showHistoryGenreModal(label, items);
+        segment.onclick = openGenre;
+        segment.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openGenre();
+          }
+        };
+        segment.title = `${label}: ${items.length} title${items.length === 1 ? "" : "s"}`;
+        segment.setAttribute("tabindex", "0");
+        segment.setAttribute("role", "button");
+        segment.setAttribute("aria-label", `Open ${label} watched titles`);
+      });
     },
 
     historyDashboard() {
@@ -4260,7 +4346,7 @@
       }).join("");
       const genreBarHtml = data.genres.map(genre => {
         const pct = (genre.weight / genreTotal) * 100;
-        return `<div style="width:${pct}%;background:${genre.color};" title="${Views.escapeHtml(genre.label)}"></div>`;
+        return `<div class="history-genre-segment" data-genre="${Views.escapeHtml(genre.label)}" style="width:${pct}%;background:${genre.color};" title="${Views.escapeHtml(genre.label)}"></div>`;
       }).join("");
       const recentHtml = data.recent.length
         ? data.recent.map((item, index) => {
