@@ -3545,36 +3545,258 @@
       const slugTitle = title.trim().replace(/\s+/g, "-");
 
       if (lower.includes("tubi")) {
-        return `https://tubitv.com/search/${encodedTitle}`;
-      } else if (lower.includes("pluto")) {
-        return `https://pluto.tv/us/search?query=${encodedTitle}`;
-      } else if (lower.includes("crackle")) {
-        return `https://www.crackle.com/search?query=${encodedTitle}`;
-      } else if (lower.includes("roku")) {
-        return `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
-      } else if (lower.includes("freevee")) {
-        return `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
-      } else if (lower.includes("uflix")) {
-        return `https://uflix.cc/search?keyword=${encodedTitle}`;
-        } else if (lower.includes("beta")) {
-        return `https://uflix-beta.vercel.app/search/${encodedTitle}`;
-      } else if (lower.includes("soap2day")) {
-        return `https://ww25.soap2day.day/?s=${encodedTitle}`;
-      } else if (lower.includes("netmirror")) {
-        return `https://www.google.com/search?q=NetMirror+App`;
-      } else if (lower.includes("cineb")) {
-        return `https://cineb.rs/search/${slugTitle}`;
-      } else if (lower.includes("lookmovie")) {
-        return `https://www.google.com/search?q=LookMovie`;
-      } else if (lower.includes("fmovies")) {
-        return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
-      } else if (lower.includes("123movies")) {
-        return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
-      } else if (lower.includes("yesmovies")) {
-        return `https://moviejabber.org/search/?s=${encodedTitle}`;
-      } else if (lower.includes("flixtor")) {
-        return `https://flixtor.studio/?s=${encodedTitle}`;
-      }
+  return `https://tubitv.com/search/${encodedTitle}`;
+} else if (lower.includes("pluto")) {
+  return `https://pluto.tv/us/search?query=${encodedTitle}`;
+} else if (lower.includes("crackle")) {
+  return `https://www.crackle.com/search?query=${encodedTitle}`;
+} else if (lower.includes("roku")) {
+  return `https://therokuchannel.roku.com/search?q=${encodedTitle}`;
+} else if (lower.includes("freevee")) {
+  return `https://www.amazon.com/s?k=${encodedTitle}&i=instant-video`;
+} else if (lower.includes("uflix")) {
+  return `https://uflix.cc/search?keyword=${encodedTitle}`;
+} else if (lower.includes("beta")) {
+  return `https://uflix-beta.vercel.app/search/${encodedTitle}`;
+} else if (lower.includes("soap2day")) {
+  return `https://ww25.soap2day.day/?s=${encodedTitle}`;
+} else if (lower.includes("soap2day.day")) {
+  return `https://ww25.soap2day.day/?s=${encodedTitle}`;
+} else if (lower.includes("soap2day.to")) {
+  return `https://ww25.soap2day.day/?s=${encodedTitle}`;
+} else if (lower.includes("soap2day.rs")) {
+  return `https://ww25.soap2day.day/?s=${encodedTitle}`;
+} else if (lower.includes("netmirror")) {
+  return `https://netmirror.app/search/${encodedTitle}`;
+} else if (lower.includes("netmirror.app")) {
+  return `https://netmirror.app/search/${encodedTitle}`;
+} else if (lower.includes("netmirror.vip")) {
+  return `https://netmirror.app/search/${encodedTitle}`;
+} else if (lower.includes("cineb")) {
+  return `https://cineb.rs/search/${slugTitle}`;
+} else if (lower.includes("cineb.net")) {
+  return `https://cineb.rs/search/${slugTitle}`;
+} else if (lower.includes("cineb-official")) {
+  return `https://cineb.rs/search/${slugTitle}`;
+} else if (lower.includes("lookmovie")) {
+  return `https://lookmovie.to/search?q=${encodedTitle}`;
+} else if (lower.includes("lookmovie2")) {
+  return `https://lookmovie2.to/search?q=${encodedTitle}`;
+} else if (lower.includes("lookmovie2.to")) {
+  return `https://lookmovie2.to/search?q=${encodedTitle}`;
+} else if (lower.includes("fmovies")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("fmovies.co")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("fmovies.to")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("fmovies.gd")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("fmoviesz")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("fmovies24")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("123movies")) {
+  return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+} else if (lower.includes("123moviesfree")) {
+  return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+} else if (lower.includes("0123movies")) {
+  return `https://ww7.123moviesfree.net/search/?q=${encodedTitle}`;
+} else if (lower.includes("gomovies")) {
+  return `https://gomovies.sx/search/${encodedTitle}`;
+} else if (lower.includes("gostream")) {
+  return `https://gostream.site/search/${encodedTitle}`;
+} else if (lower.includes("memovies")) {
+  return `https://memovies.to/search?q=${encodedTitle}`;
+} else if (lower.includes("me movies")) {
+  return `https://memovies.to/search?q=${encodedTitle}`;
+} else if (lower.includes("yesmovies")) {
+  return `https://yesmovies.ag/search/${encodedTitle}`;
+} else if (lower.includes("yesmovies.ag")) {
+  return `https://yesmovies.ag/search/${encodedTitle}`;
+} else if (lower.includes("lookmovie.to")) {
+  return `https://lookmovie.to/search?q=${encodedTitle}`;
+} else if (lower.includes("flixtor")) {
+  return `https://flixtor.studio/?s=${encodedTitle}`;
+} else if (lower.includes("flixtorz")) {
+  return `https://flixtor.studio/?s=${encodedTitle}`;
+} else if (lower.includes("flixorent")) {
+  return `https://flixtor.studio/?s=${encodedTitle}`;
+} else if (lower.includes("putlocker")) {
+  return `https://putlocker.pe/search/${encodedTitle}`;
+} else if (lower.includes("putlocker.pe")) {
+  return `https://putlocker.pe/search/${encodedTitle}`;
+} else if (lower.includes("putlockerfree")) {
+  return `https://putlocker.pe/search/${encodedTitle}`;
+} else if (lower.includes("solarmovie")) {
+  return `https://solarmovie.one/search?keyword=${encodedTitle}`;
+} else if (lower.includes("solarmovie.ru")) {
+  return `https://solarmovie.one/search?keyword=${encodedTitle}`;
+} else if (lower.includes("solarmovie.one")) {
+  return `https://solarmovie.one/search?keyword=${encodedTitle}`;
+} else if (lower.includes("solarmovieru")) {
+  return `https://solarmovie.one/search?keyword=${encodedTitle}`;
+} else if (lower.includes("solarmovies")) {
+  return `https://solarmovie.one/search?keyword=${encodedTitle}`;
+} else if (lower.includes("myflixer")) {
+  return `https://myflixer.to/search?q=${encodedTitle}`;
+} else if (lower.includes("myflixerz")) {
+  return `https://myflixer.to/search?q=${encodedTitle}`;
+} else if (lower.includes("myflixer.to")) {
+  return `https://myflixer.to/search?q=${encodedTitle}`;
+} else if (lower.includes("sflix")) {
+  return `https://sflix.to/search/${encodedTitle}`;
+} else if (lower.includes("sflix.to")) {
+  return `https://sflix.to/search/${encodedTitle}`;
+} else if (lower.includes("sflix2")) {
+  return `https://sflix.to/search/${encodedTitle}`;
+} else if (lower.includes("moviesjoy")) {
+  return `https://moviesjoy.space/search/${encodedTitle}`;
+} else if (lower.includes("moviesjoy.space")) {
+  return `https://moviesjoy.space/search/${encodedTitle}`;
+} else if (lower.includes("moviesjoy.tv")) {
+  return `https://moviesjoy.space/search/${encodedTitle}`;
+} else if (lower.includes("hurawatch")) {
+  return `https://hurawatch-official.to/search?q=${encodedTitle}`;
+} else if (lower.includes("hurawatch-official")) {
+  return `https://hurawatch-official.to/search?q=${encodedTitle}`;
+} else if (lower.includes("watchseries")) {
+  return `https://watchseries.bar/search?q=${encodedTitle}`;
+} else if (lower.includes("watchseries.bar")) {
+  return `https://watchseries.bar/search?q=${encodedTitle}`;
+} else if (lower.includes("watchserieshd")) {
+  return `https://watchseries.bar/search?q=${encodedTitle}`;
+} else if (lower.includes("bflix")) {
+  return `https://bflix.to/search?q=${encodedTitle}`;
+} else if (lower.includes("bflixz")) {
+  return `https://bflix.to/search?q=${encodedTitle}`;
+} else if (lower.includes("braflix")) {
+  return `https://bflix.to/search?q=${encodedTitle}`;
+} else if (lower.includes("goojara")) {
+  return `https://goojara.to/search/${encodedTitle}`;
+} else if (lower.includes("goku")) {
+  return `https://goku.to/search?q=${encodedTitle}`;
+} else if (lower.includes("vumoo")) {
+  return `https://vumoo.to/search/${encodedTitle}`;
+} else if (lower.includes("azmovies")) {
+  return `https://azmovies.to/search/${encodedTitle}`;
+} else if (lower.includes("0123movies")) {
+  return `https://0123movies.to/search/${encodedTitle}`;
+} else if (lower.includes("dorawatch")) {
+  return `https://dorawatch.to/search/${encodedTitle}`;
+} else if (lower.includes("wmovies")) {
+  return `https://wmovies.to/search?q=${encodedTitle}`;
+} else if (lower.includes("tinyzone")) {
+  return `https://tinyzone.to/search?q=${encodedTitle}`;
+} else if (lower.includes("2k movie") || lower.includes("2kmovie")) {
+  return `https://2kmovie.to/search?q=${encodedTitle}`;
+} else if (lower.includes("hdtoday")) {
+  return `https://hdtoday.to/search/${encodedTitle}`;
+} else if (lower.includes("cuevana")) {
+  return `https://cuevana3.io/search?keyword=${encodedTitle}`;
+} else if (lower.includes("cuevana3")) {
+  return `https://cuevana3.io/search?keyword=${encodedTitle}`;
+} else if (lower.includes("cuevana.biz")) {
+  return `https://cuevana3.io/search?keyword=${encodedTitle}`;
+} else if (lower.includes("vegamovies")) {
+  return `https://vegamovies.im/search/${encodedTitle}`;
+} else if (lower.includes("vegamovies.im")) {
+  return `https://vegamovies.im/search/${encodedTitle}`;
+} else if (lower.includes("1tamilmv")) {
+  return `https://1tamilmv.net/search/${encodedTitle}`;
+} else if (lower.includes("hianime")) {
+  return `https://hianime.to/search/${encodedTitle}`;
+} else if (lower.includes("hianime.to")) {
+  return `https://hianime.to/search/${encodedTitle}`;
+} else if (lower.includes("aniwatch")) {
+  return `https://aniwatch.to/search/${encodedTitle}`;
+} else if (lower.includes("zoro")) {
+  return `https://zoro.to/search?keyword=${encodedTitle}`;
+} else if (lower.includes("zoro.to")) {
+  return `https://zoro.to/search?keyword=${encodedTitle}`;
+} else if (lower.includes("9anime")) {
+  return `https://9anime.to/search?keyword=${encodedTitle}`;
+} else if (lower.includes("animeflv")) {
+  return `https://animeflv.net/browse?search=${encodedTitle}`;
+} else if (lower.includes("redecanais")) {
+  return `https://redecanais.tv/search/${encodedTitle}`;
+} else if (lower.includes("redecanaistv")) {
+  return `https://redecanais.tv/search/${encodedTitle}`;
+} else if (lower.includes("futemax")) {
+  return `https://futemax.tv/search/${encodedTitle}`;
+} else if (lower.includes("magistv")) {
+  return `https://magis.tv/search/${encodedTitle}`;
+} else if (lower.includes("flujotv")) {
+  return `https://flujotv.net/search/${encodedTitle}`;
+} else if (lower.includes("popcorn time") || lower.includes("popcorn")) {
+  return `https://popcorn-time.to/search/${encodedTitle}`;
+} else if (lower.includes("cinema hd") || lower.includes("cinemahd") || lower.includes("cinema-hd")) {
+  return `https://cinema-hd.com/search?q=${encodedTitle}`;
+} else if (lower.includes("teatv") || lower.includes("tea tv")) {
+  return `https://teatv.net/search?q=${encodedTitle}`;
+} else if (lower.includes("onstream")) {
+  return `https://onstream.to/search?q=${encodedTitle}`;
+} else if (lower.includes("streamed.su")) {
+  return `https://streamed.su/search/${encodedTitle}`;
+} else if (lower.includes("vidcloud")) {
+  return `https://vidcloud.to/search?q=${encodedTitle}`;
+} else if (lower.includes("megacloud")) {
+  return `https://megacloud.to/search?q=${encodedTitle}`;
+} else if (lower.includes("rapidcloud")) {
+  return `https://rapidcloud.to/search?q=${encodedTitle}`;
+} else if (lower.includes("2embed")) {
+  return `https://2embed.to/search/${encodedTitle}`;
+} else if (lower.includes("vidsrc")) {
+  return `https://vidsrc.me/search/${encodedTitle}`;
+} else if (lower.includes("doodstream")) {
+  return `https://doodstream.com/search/${encodedTitle}`;
+} else if (lower.includes("streamtape")) {
+  return `https://streamtape.com/search/${encodedTitle}`;
+} else if (lower.includes("voe.sx")) {
+  return `https://voe.sx/search/${encodedTitle}`;
+} else if (lower.includes("flixer")) {
+  return `https://flixer.to/search/${encodedTitle}`;
+} else if (lower.includes("wave")) {
+  return `https://wave.to/search/${encodedTitle}`;
+} else if (lower.includes("primewire")) {
+  return `https://primewire.show/search/${encodedTitle}`;
+} else if (lower.includes("movies123")) {
+  return `https://movies123.red/search/${encodedTitle}`;
+} else if (lower.includes("flixtorz")) {
+  return `https://flixtorz.to/search/${encodedTitle}`;
+} else if (lower.includes("myflixer.to")) {
+  return `https://myflixer.to/search?q=${encodedTitle}`;
+} else if (lower.includes("sflix.to")) {
+  return `https://sflix.to/search/${encodedTitle}`;
+} else if (lower.includes("lookmovie2.to")) {
+  return `https://lookmovie2.to/search?q=${encodedTitle}`;
+} else if (lower.includes("spacemov") || lower.includes("spacemov.to")) {
+  return `https://spacemov.to/search/${encodedTitle}`;
+} else if (lower.includes("musichq")) {
+  return `https://musichq.to/search/${encodedTitle}`;
+} else if (lower.includes("yts") || lower.includes("yify")) {
+  return `https://yts.mx/search/${encodedTitle}`;
+} else if (lower.includes("yesmovies.ag")) {
+  return `https://yesmovies.ag/search/${encodedTitle}`;
+} else if (lower.includes("yesmovies.to")) {
+  return `https://yesmovies.ag/search/${encodedTitle}`;
+} else if (lower.includes("fmovies.co")) {
+  return `https://ww4.fmovies.co/search/?q=${encodedTitle}`;
+} else if (lower.includes("gnula")) {
+  return `https://gnula.nu/busqueda/?q=${encodedTitle}`;
+} else if (lower.includes("cmovies")) {
+  return `https://cmovies.to/search?q=${encodedTitle}`;
+} else if (lower.includes("freeflix")) {
+  return `https://freeflix.to/search?q=${encodedTitle}`;
+} else if (lower.includes("hdmovie2")) {
+  return `https://hdmovie2.to/search?q=${encodedTitle}`;
+} else if (lower.includes("desiremovies")) {
+  return `https://desiremovies.to/search?q=${encodedTitle}`;
+} else if (lower.includes("music hq") || lower.includes("musichq")) {
+  return `https://musichq.to/search/${encodedTitle}`;
+} else {
+  return null;
+}
 
       return `https://www.google.com/search?q=${encodeURIComponent(
         `${title} on ${serviceName}`
@@ -3593,11 +3815,68 @@
         "Soap2Day",
         "NetMirror",
         "Cineb",
+        "LookMovie",
         "FMovies",
         "123Movies",
-        "LookMovie",
+        "GoMovies",
+        "Gostream",
+        "MeMovies",
         "YesMovies",
-        "FlixTor"
+        "FlixTor",
+        "PutLocker",
+        "SolarMovie",
+        "MyFlixer",
+        "SFlix",
+        "MoviesJoy",
+        "HuraWatch",
+        "WatchSeries",
+        "BFlix",
+        "GooJara",
+        "Goku",
+        "Vumoo",
+        "AzMovies",
+        "DoraWatch",
+        "WMovies",
+        "TinyZone",
+        "2KMovie",
+        "HDToday",
+        "Cuevana",
+        "VegaMovies",
+        "1TamilMV",
+        "HiAnime",
+        "AniWatch",
+        "Zoro",
+        "9Anime",
+        "AnimeFlv",
+        "RedeCanais",
+        "Futemax",
+        "MagisTV",
+        "FlujoTV",
+        "Popcorn Time",
+        "Cinema HD",
+        "TeaTV",
+        "OnStream",
+        "VidCloud",
+        "MegaCloud",
+        "RapidCloud",
+        "2Embed",
+        "VidSrc",
+        "DoodStream",
+        "StreamTape",
+        "Voe",
+        "Flixer",
+        "Wave",
+        "PrimeWire",
+        "Movies123",
+        "Flixtorz",
+        "SpaceMov",
+        "MusicHQ",
+        "YTS",
+        "GNula",
+        "CMovies",
+        "FreeFlix",
+        "HDMovie2",
+        "DesireMovies"
       ];
 
       const links = services.map(service => {
