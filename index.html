@@ -1938,6 +1938,20 @@
 
     normalizeTmdbGenreName(value) {
       if (value === null || value === undefined || value === "") return null;
+
+      if (typeof value === "object") {
+        if (typeof value.name === "string" && value.name.trim()) {
+          return Views.normalizeTmdbGenreName(value.name);
+        }
+        if (typeof value.label === "string" && value.label.trim()) {
+          return Views.normalizeTmdbGenreName(value.label);
+        }
+        if (typeof value.id === "number") {
+          return Views.normalizeTmdbGenreName(value.id);
+        }
+        return null;
+      }
+
       if (typeof value === "number") {
         return Views.getTmdbGenreIdMap()[value] || null;
       }
@@ -2000,19 +2014,43 @@
     getGenreLabelsFromItem(item) {
       if (!item) return [];
       const names = [];
+      const candidates = [];
+
+      const pushCandidate = (candidate) => {
+        if (candidate === null || candidate === undefined || candidate === "") return;
+
+        if (typeof candidate === "object") {
+          if (candidate.name) pushCandidate(candidate.name);
+          else if (candidate.label) pushCandidate(candidate.label);
+          else if (candidate.id !== undefined) pushCandidate(Number(candidate.id));
+          return;
+        }
+
+        if (typeof candidate === "number") {
+          candidates.push(candidate);
+          return;
+        }
+
+        if (typeof candidate === "string") {
+          candidates.push(candidate);
+        }
+      };
+
       if (Array.isArray(item.genres)) {
-        item.genres.forEach(genre => {
-          const normalized = Views.normalizeTmdbGenreName(genre);
-          if (normalized) names.push(normalized);
-        });
+        item.genres.forEach(pushCandidate);
       }
       if (Array.isArray(item.genre_ids)) {
-        item.genre_ids.forEach(genreId => {
-          const normalized = Views.normalizeTmdbGenreName(Number(genreId));
-          if (normalized) names.push(normalized);
-        });
+        item.genre_ids.forEach(id => pushCandidate(Number(id)));
       }
-      return [...new Set(names)];
+
+      candidates.forEach(candidate => {
+        const normalized = Views.normalizeTmdbGenreName(candidate);
+        if (normalized && !names.includes(normalized)) {
+          names.push(normalized);
+        }
+      });
+
+      return names;
     },
 
     initOnboarding() {
@@ -4144,12 +4182,18 @@
           return bTime - aTime || b.index - a.index;
         });
 
-      const watchedRange = watchedWithDates.filter(entry => !entry.date || entry.date >= startDate);
+      const watchedRange = watchedWithDates.filter(entry => entry.date && entry.date >= startDate);
       const watchedRangeItems = watchedRange.map(entry => entry.item);
+      const rangeEntries = watchedRange.slice();
       const moviePlays = watchedRange.filter(entry => entry.item.type !== "show").length;
       const showPlays = watchedRange.filter(entry => entry.item.type === "show").length;
       const episodePlays = watchedRange.reduce((sum, entry) => sum + Views.countWatchedEpisodes(entry.item), 0);
       const totalMinutes = watchedRange.reduce((sum, entry) => sum + Views.estimateWatchMinutes(entry.item), 0);
+
+      const filteredCheckins = checkins.filter(entry => {
+        const checkDate = Views.parseHistoryDate(entry.ts);
+        return checkDate && checkDate >= startDate;
+      });
 
       const dailyTimeline = Array.from({ length: days }, (_, index) => {
         const day = new Date(startDate);
@@ -4157,7 +4201,7 @@
         const key = day.toISOString().slice(0, 10);
         const items = [];
 
-        watchedWithDates.forEach(entry => {
+        rangeEntries.forEach(entry => {
           if (entry.date && entry.date.toISOString().slice(0, 10) === key) {
             items.push({
               kind: "watch",
@@ -4168,7 +4212,7 @@
           }
         });
 
-        checkins.forEach(entry => {
+        filteredCheckins.forEach(entry => {
           const checkDate = Views.parseHistoryDate(entry.ts);
           if (checkDate && checkDate.toISOString().slice(0, 10) === key) {
             items.push({
@@ -4209,24 +4253,12 @@
         });
       });
 
-      if (!genreMap.size && AppState.user?.liked_genres?.length) {
-        AppState.user.liked_genres.forEach((genre, index) => {
-          genreMap.set(genre, {
-            label: genre,
-            count: Math.max(1, AppState.user.liked_genres.length - index),
-            movies: 0,
-            shows: 0,
-            episodes: 0
-          });
-        });
-      }
-
       const palette = ["#0ea5e9", "#3b82f6", "#f97316", "#ef4444", "#eab308", "#22c55e", "#8b5cf6", "#ec4899", "#64748b"];
       const genres = Array.from(genreMap.values())
         .sort((a, b) => b.count - a.count)
         .slice(0, 9)
         .map((genre, index) => {
-          const items = watched.filter(item => (Array.isArray(item.genres) ? item.genres : []).includes(genre.label));
+          const items = watchedRangeItems.filter(item => Views.getGenreLabelsFromItem(item).includes(genre.label));
           return {
             ...genre,
             color: palette[index % palette.length],
@@ -4235,23 +4267,8 @@
           };
         });
 
-      if (!genres.length) {
-        ["Drama", "Comedy", "Mystery", "Documentary"].forEach((label, index) => {
-          genres.push({
-            label,
-            count: 1,
-            movies: index === 0 ? watched.length : 0,
-            shows: 0,
-            episodes: 0,
-            color: palette[index],
-            weight: 1,
-            items: watched.filter(item => (Array.isArray(item.genres) ? item.genres : []).includes(label))
-          });
-        });
-      }
-
-      const current = watchedWithDates[0]?.item || watchlist[0] || AppState.recommendations?.[0] || null;
-      const recent = watchedWithDates.map(entry => entry.item).slice(0, 10);
+      const current = rangeEntries[0]?.item || watchlist[0] || AppState.recommendations?.[0] || null;
+      const recent = rangeEntries.map(entry => entry.item).slice(0, 10);
 
       return {
         current,
@@ -4263,11 +4280,11 @@
         dailyCounts,
         dailyTimeline,
         genres,
-        checkinCount: checkins.length,
-        watchedCount: watched.length,
+        checkinCount: filteredCheckins.length,
+        watchedCount: watchedRange.length,
         watchlistCount: watchlist.length,
-        moodAverage: checkins.length
-          ? Math.round((checkins.reduce((sum, c) => sum + Number(c.mood_score || 0), 0) / checkins.length) * 10) / 10
+        moodAverage: filteredCheckins.length
+          ? Math.round((filteredCheckins.reduce((sum, c) => sum + Number(c.mood_score || 0), 0) / filteredCheckins.length) * 10) / 10
           : null
       };
     },
